@@ -1,35 +1,35 @@
 rm(list=ls())
 
-pkg <- c("rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime', 'TTR', 'lhs')
+pkg <- c("rtrade", "rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime', 'TTR', 'lhs')
 invisible(lapply(pkg, library, character.only=TRUE))
 
-path <- 'funcs'
-for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
+#path <- 'funcs'
+#for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
 
-if (TRUE) {
-  
-  set_credentials(key_api = 'PxJjdXqkgu8I7ZZCgYVA9ESOZn06zHv6GRO6CKgpVzhBf0ndUKaLeVdyCjrCsQGv', 
-                  key_secret = 'tG0T0XmXz4YTfoMd05J57exYeENtVdWWdu8e2ZLMKICj2bqDglutS49SVw8J4jJk')
-  
+if (FALSE) {
+
+  set_credentials(key_api = '',
+                  key_secret = '')
+
   check_credentials()
-  
+
 }
 
 
 par <- list(
-  
+
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
   limit = pmin(1000, 12*12),
-  
+
   slope_threshold_buy = -1, # below this, do not buy
   slope_threshold_sell = 2, # above this, do not sell
   risk_ratio = 2, # Only on when in sideways trend (consolidating)
-  
+
   sleep_bt_runs = 10,
   sleep_bt_orders = 30,
-  
+
   n_supertrend_short = 10,
   f_supertrend_short_buy = 1,
   f_supertrend_short_sell = 1.1,
@@ -37,15 +37,15 @@ par <- list(
   f_atr = 1.05, # factor to multiple ATR by when determining sell stop
   n_ema_1 = 20, # For buy triggers
   n_ema_2 = 10, # For sell triggers
-  
+
   manual_sell_triggers = FALSE,
   manual_sell_trigger_low = -0.0025,
   manual_sell_trigger_high = 0.005,
-  
+
   time_window = 5000,
   wait_and_see = TRUE, # wait until time step is a portion complete before acting
   wait_and_see_prop = 1/5
-  
+
 )
 
 
@@ -53,8 +53,8 @@ par <- list(
 
 t_start <- proc.time()
 
-n <- 1000
-Y <- randomLHS(n, 10) 
+n <- 10
+Y <- randomLHS(n, 10)
 Y[,1] <- qunif(Y[,1], -10, 0)  # slope_threshold_buy
 Y[,2] <- qunif(Y[,2], 0, 10)   # slope_threshold_sell
 Y[,3] <- qunif(Y[,3], 1, 20)   # risk_ratio
@@ -68,7 +68,7 @@ Y[,10] <- qunif(Y[,10], 6, 24)   # n_ema_2
 
 
 map_lhs_to_par <- function(Y, par, i) {
-  
+
   tmp_par <- par
   tmp_par$slope_threshold_buy <- Y[i,1]
   tmp_par$slope_threshold_sell <- Y[i,2]
@@ -81,31 +81,35 @@ map_lhs_to_par <- function(Y, par, i) {
   tmp_par$n_ema_1 <- Y[i,9]
   tmp_par$n_ema_2 <- Y[i,10]
   return(tmp_par)
-  
+
 }
 
 out <- data.frame()
 for (i in 1:n) {
-  
+
   message(i)
   tmp_par <- map_lhs_to_par(Y, par, i)
-  
+
   tmp <- run_trade_algo(par=tmp_par, live=FALSE)
-  
+
   out <- rbind(out,
                data.frame(i = i,
                           n_trades = tmp$n_trades,
                           win_prob = tmp$win_prob,
                           percent_change = tmp$percent_change)
   )
-  
+
 }
 
 t_stop <- proc.time() - t_start
 message(paste('Runtime:', round(as.numeric(t_stop["elapsed"])/60, 2), 'minutes'))
 
+min_win_prob <- 0.5
 out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
-out <- out[out$win_prob > 0.55,]
+sel <- out$win_prob > min_win_prob
+if (!any(sel)) stop('No runs with win probability above threshold')
+out <- out[out$win_prob > min_win_prob,]
+
 out <- out[order(out$percent_change, out$win_prob, decreasing = TRUE),]
 head(out, n=10)
 
@@ -140,6 +144,8 @@ if (best$n_trades > 1) {
 }
 
 par(mfrow=c(1,1))
+
+
 
 
 saveRDS(par_best, file.path(getwd(), 'output', 'par_best.rds'))
