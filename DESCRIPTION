@@ -1,11 +1,11 @@
 Package: rtrade
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Custom tools for algorithmic trading
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: John R Giles
+Maintainer: John R Giles <gilesjohnr@gmail.com>
+Description: Customizable tools to fit trading models to historical data and then 
+run them live on a trading API.
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
