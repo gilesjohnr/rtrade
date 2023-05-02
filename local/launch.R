@@ -53,7 +53,7 @@ par <- list(
 
 t_start <- proc.time()
 
-n <- 10
+n <- 1000
 Y <- randomLHS(n, 10)
 Y[,1] <- qunif(Y[,1], -10, 0)  # slope_threshold_buy
 Y[,2] <- qunif(Y[,2], 0, 10)   # slope_threshold_sell
