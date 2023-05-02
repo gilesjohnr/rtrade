@@ -180,8 +180,18 @@ if (best$n_trades > 1) {
 
 par(mfrow=c(1,1))
 
-saveRDS(par_best, file.path(getwd(), 'output', 'par_best.rds'))
 
+
+path_cached_params <- file.path(getwd(), 'output', 'par_best.rds')
+saveRDS(par_best, path_cached_params)
+
+
+
+if (FALSE) {
+
+  par_best <- readRDS(path_cached_params)
+
+}
 
 
 run_trade_algo(par=par_best, live=TRUE)
