@@ -1,4 +1,4 @@
-run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
+run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
   error_state <- FALSE
   error_count <- 0
@@ -9,9 +9,9 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
       timestamp <- timestamp_to_date(get_timestamp())
 
-      if (par$wait_and_see) {
+      if (param$wait_and_see) {
 
-        timestep_duration <- as.integer(strsplit(par$interval_short, 'm')[[1]])
+        timestep_duration <- as.integer(strsplit(param$interval_short, 'm')[[1]])
 
         tmp <- seq(0, 60, timestep_duration)
         tmp <- tmp[!tmp==60]
@@ -19,7 +19,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
         t1 <- tmp[(tmp - timestamp) < 0]
         t1 <- t1[length(t1)]
-        t2 <- t1 + (timestep_duration*60) * par$wait_and_see_prop
+        t2 <- t1 + (timestep_duration*60) * param$wait_and_see_prop
 
         if (timestamp < t2) {
           wait_time <- difftime(t2, timestamp, units='secs')
@@ -33,7 +33,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
       # Get current data
       #-------------------------------------------------------------------------
 
-      d <- compile_data(par)
+      d <- compile_data(param)
 
       t <- which.max(d$date_time)
       current_price <- d$close[t]
@@ -45,11 +45,11 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
       bal <- get_account_balance()
       bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-      bal_sym <- bal$USD[bal$asset == par$asset]
+      bal_sym <- bal$USD[bal$asset == param$asset]
       if (length(bal_sym) == 0) bal_sym <- 0
-      #message(paste0(capture.output(as.data.frame(bal[bal$asset %in% c(par$asset, 'USD'),])), collapse = "\n"))
+      #message(paste0(capture.output(as.data.frame(bal[bal$asset %in% c(param$asset, 'USD'),])), collapse = "\n"))
 
-      last_order <- get_last_order(par$symbol, status='FILLED')
+      last_order <- get_last_order(param$symbol, status='FILLED')
 
       #-------------------------------------------------------------------------
       # Run trading strategy
@@ -61,10 +61,10 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
         # BUY strategy
         #-------------------------------------------------------------------------
 
-        if (verbose) message(glue("{timestamp} | mode: BUY | {par$symbol} = {current_price}"))
+        if (verbose) message(glue("{timestamp} | mode: BUY | {param$symbol} = {current_price}"))
 
 
-        logic_buy <- get_buy_logic(d, t, par, live=TRUE)
+        logic_buy <- get_buy_logic(d, t, param, live=TRUE)
 
 
         if (logic_buy) {
@@ -73,54 +73,54 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
             # TRY 1
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-            #bid <- get_order_depth(par$symbol)$bid_price[1]
+            #bid <- get_order_depth(param$symbol)$bid_price[1]
             bid <- d$mid[t]
 
-            buy_order <- create_order(symbol = par$symbol,
+            buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
                                       type = 'LIMIT',
                                       price = bid,
                                       quantity = round(bal_usd/bid - 1e-04, 4),
                                       time_in_force = 'GTC',
-                                      time_window = par$time_window)
+                                      time_window = param$time_window)
 
-            Sys.sleep(par$sleep_bt_orders)
-            tmp <- get_order(par$symbol, buy_order$orderId)
+            Sys.sleep(param$sleep_bt_orders)
+            tmp <- get_order(param$symbol, buy_order$orderId)
 
-            check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
+            check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
             if (check) { # TRY 2
 
-              cancel_order(par$symbol, buy_order$orderId); Sys.sleep(2)
+              cancel_order(param$symbol, buy_order$orderId); Sys.sleep(2)
 
               bal <- get_account_balance()
               bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
 
-              tmp <- get_order_depth(par$symbol)
+              tmp <- get_order_depth(param$symbol)
               #bid <- tmp$bid_price[1] + ((tmp$bid_price[1] - tmp$bid_price[2])*0.25)
-              bid <- get_order_depth(par$symbol)$bid_price[1]
+              bid <- get_order_depth(param$symbol)$bid_price[1]
 
-              buy_order <- create_order(symbol = par$symbol,
+              buy_order <- create_order(symbol = param$symbol,
                                         side = 'BUY',
                                         type = 'LIMIT',
                                         price = bid,
                                         quantity = round(bal_usd/bid - 1e-04, 4),
                                         time_in_force = 'GTC',
-                                        time_window = par$time_window)
+                                        time_window = param$time_window)
 
-              Sys.sleep(par$sleep_bt_orders)
-              tmp <- get_order(par$symbol, buy_order$orderId)
+              Sys.sleep(param$sleep_bt_orders)
+              tmp <- get_order(param$symbol, buy_order$orderId)
 
-              check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
+              check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
               if (check) { # TRY 3
 
-                cancel_order(par$symbol, buy_order$orderId); Sys.sleep(2)
+                cancel_order(param$symbol, buy_order$orderId); Sys.sleep(2)
 
-                buy_order <- create_order(symbol = par$symbol,
+                buy_order <- create_order(symbol = param$symbol,
                                           side = 'BUY',
                                           type = 'MARKET',
-                                          quantity = bal$free[bal$asset == par$asset],
+                                          quantity = bal$free[bal$asset == param$asset],
                                           time_in_force = 'IOC',
-                                          time_window = par$time_window)
+                                          time_window = param$time_window)
 
                 if (buy_order$status == 'FILLED') message(" BUY MARKET order FILLED") else message(" BUY MARKET order placed")
 
@@ -139,12 +139,12 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
           }, error = function(e) {
 
 
-            buy_order <- create_order(symbol = par$symbol,
+            buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
                                       type = 'MARKET',
-                                      quantity = bal$free[bal$asset == par$asset],
+                                      quantity = bal$free[bal$asset == param$asset],
                                       time_in_force = 'IOC',
-                                      time_window = par$time_window)
+                                      time_window = param$time_window)
 
             if (buy_order$status == 'FILLED') message(" BUY MARKET order FILLED") else message(" BUY MARKET order placed")
 
@@ -159,10 +159,10 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
         # SELL strategy
         #-------------------------------------------------------------------------
 
-        message(glue("{timestamp} | mode: SELL | {par$symbol} = {current_price}"))
+        message(glue("{timestamp} | mode: SELL | {param$symbol} = {current_price}"))
 
 
-        logic_sell <- get_sell_logic(d, t, par)
+        logic_sell <- get_sell_logic(d, t, param)
 
 
 
@@ -171,52 +171,52 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
           tryCatch({
 
             # TRY 1
-            #ask <- get_order_depth(par$symbol)$ask_price[1]
+            #ask <- get_order_depth(param$symbol)$ask_price[1]
             ask <- d$mid[t]
 
-            sell_order <- create_order(symbol = par$symbol,
+            sell_order <- create_order(symbol = param$symbol,
                                        side = 'SELL',
                                        type = 'LIMIT',
                                        price = ask,
-                                       quantity = bal$free[bal$asset == par$asset],
+                                       quantity = bal$free[bal$asset == param$asset],
                                        time_in_force = 'GTC',
-                                       time_window = par$time_window)
+                                       time_window = param$time_window)
 
-            Sys.sleep(par$sleep_bt_orders)
-            tmp <- get_order(par$symbol, sell_order$orderId)
+            Sys.sleep(param$sleep_bt_orders)
+            tmp <- get_order(param$symbol, sell_order$orderId)
 
 
-            check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
+            check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
             if (check) { # TRY 2
 
-              cancel_order(par$symbol, sell_order$orderId); Sys.sleep(2)
+              cancel_order(param$symbol, sell_order$orderId); Sys.sleep(2)
               bal <- get_account_balance()
-              #tmp <- get_order_depth(par$symbol)
+              #tmp <- get_order_depth(param$symbol)
               #ask <- tmp$ask_price[1] - ((tmp$ask_price[2] - tmp$ask_price[1])*0.25)
-              ask <- get_order_depth(par$symbol)$ask_price[1]
+              ask <- get_order_depth(param$symbol)$ask_price[1]
 
-              sell_order <- create_order(symbol = par$symbol,
+              sell_order <- create_order(symbol = param$symbol,
                                          side = 'SELL',
                                          type = 'LIMIT',
                                          price = ask,
-                                         quantity = bal$free[bal$asset == par$asset],
+                                         quantity = bal$free[bal$asset == param$asset],
                                          time_in_force = 'GTC',
-                                         time_window = par$time_window)
+                                         time_window = param$time_window)
 
-              Sys.sleep(par$sleep_bt_orders)
-              tmp <- get_order(par$symbol, sell_order$orderId)
+              Sys.sleep(param$sleep_bt_orders)
+              tmp <- get_order(param$symbol, sell_order$orderId)
 
-              check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
+              check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
               if (check) { # TRY 3
 
-                cancel_order(par$symbol, sell_order$orderId); Sys.sleep(2)
+                cancel_order(param$symbol, sell_order$orderId); Sys.sleep(2)
 
-                sell_order <- create_order(symbol = par$symbol,
+                sell_order <- create_order(symbol = param$symbol,
                                            side = 'SELL',
                                            type = 'MARKET',
-                                           quantity = bal$free[bal$asset == par$asset],
+                                           quantity = bal$free[bal$asset == param$asset],
                                            time_in_force = 'IOC',
-                                           time_window = par$time_window)
+                                           time_window = param$time_window)
 
                 if (sell_order$status == 'FILLED') message(" SELL MARKET order FILLED") else message(" SELL MARKET order placed")
 
@@ -234,12 +234,12 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
           }, error = function(e) {
 
 
-            sell_order <- create_order(symbol = par$symbol,
+            sell_order <- create_order(symbol = param$symbol,
                                        side = 'SELL',
                                        type = 'MARKET',
-                                       quantity = bal$free[bal$asset == par$asset],
+                                       quantity = bal$free[bal$asset == param$asset],
                                        time_in_force = 'IOC',
-                                       time_window = par$time_window)
+                                       time_window = param$time_window)
 
             if (sell_order$status == 'FILLED') message(" SELL MARKET order FILLED") else message(" SELL MARKET order placed")
 
@@ -251,8 +251,8 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
       }
 
 
-      tmp <- get_all_orders(symbol = par$symbol)
-      tmp <- tmp[tmp$status %in% c('FILLED', 'PARTIALLY FILLED'),]
+      tmp <- get_all_orders(symbol = param$symbol)
+      tmp <- tmp[tmp$status %in% c('FILLED', 'paramTIALLY FILLED'),]
 
 
       if (display) {
@@ -262,7 +262,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
         par(mar=c(3,3,2,5), xpd=FALSE)
 
         plot_candles(tail(d, n=12*12),
-                     main=glue("{par$symbol} | {d$date_time[t]} | Local: {format(Sys.time(), '%H:%M:%S')}"))
+                     main=glue("{param$symbol} | {d$date_time[t]} | Local: {format(Sys.time(), '%H:%M:%S')}"))
         lines(d$date_time, d$EMA_1, lwd=2)
         lines(d$date_time, d$EMA_2, lwd=2, col='grey50')
         lines(d$date_time, d$supertrend_1, type='l', lwd=1.5, col='pink')
@@ -288,7 +288,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
       error_state <-  FALSE
       error_count <- 0
-      Sys.sleep(par$sleep_bt_runs)
+      Sys.sleep(param$sleep_bt_runs)
 
 
     }, error = function(e) {

@@ -8,7 +8,7 @@ invisible(lapply(pkg, library, character.only=TRUE))
 path <- 'funcs'
 for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
 
-par <- list(
+param <- list(
   
   trade_mode = 'default', # 'default' or 'scavenger'
   symbol = 'BTCUSD',
@@ -28,9 +28,9 @@ par <- list(
 #-------------------------------------------------------------------------
 
 # Get daily data
-d_long <- get_klines(symbol=par$symbol,
-                     interval = par$interval_long,
-                     limit = par$limit,
+d_long <- get_klines(symbol=param$symbol,
+                     interval = param$interval_long,
+                     limit = param$limit,
                      verbose = FALSE)
 
 d_long <- cbind(d_long, clean_dates(d_long$time_open))
@@ -48,9 +48,9 @@ for (i in 2:nrow(d_long)) d_long$supertrend_long_delta[i] <- d_long$supertrend_l
 
 
 # Get hourly (or other small-scale time interval)
-d <- get_klines(symbol=par$symbol,
-                interval = par$interval_short,
-                limit = par$limit,
+d <- get_klines(symbol=param$symbol,
+                interval = param$interval_short,
+                limit = param$limit,
                 verbose = FALSE)
 
 d <- cbind(d, clean_dates(d$time_open))
@@ -81,16 +81,16 @@ d$supertrend_long_delta <- na.approx(d$supertrend_long_delta, na.rm = FALSE)
 for (i in 2:nrow(d)) if (is.na(d$supertrend_long_delta[i])) d$supertrend_long_delta[i] <- d$supertrend_long_delta[i-1]
 
 
-if (par$manual_sell_triggers) {
+if (param$manual_sell_triggers) {
   
-  sell_trigger_low <- par$manual_sell_trigger_low
-  sell_trigger_high <- par$manual_sell_trigger_high
+  sell_trigger_low <- param$manual_sell_trigger_low
+  sell_trigger_high <- param$manual_sell_trigger_high
   
 } else {
   
   sel <- which(d$date_time >= max(d$date_time) - 60*60*1)
   sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T)*1.1
-  sell_trigger_high <- -1*sell_trigger_low * par$risk_ratio
+  sell_trigger_high <- -1*sell_trigger_low * param$risk_ratio
   
 }
 
@@ -115,12 +115,12 @@ for (i in 3:(nrow(d)-1)) {
     
     
     # ONLY BUY IF not in a longer term downward trend
-    #if (!is.na(d$supertrend_long_delta[i])) logic_buy <- logic_buy & d$supertrend_long_delta[i] >= par$slope_threshold
+    #if (!is.na(d$supertrend_long_delta[i])) logic_buy <- logic_buy & d$supertrend_long_delta[i] >= param$slope_threshold
     #
     ## BUY IF shorterm buy directly preceded longterm uptrend shift
     #if (!is.na(d$supertrend_long_delta[i])) {
     #  
-    #  logic_buy_3 <- d$supertrend_long_delta[i] >= par$slope_threshold & d$supertrend_long_delta[i-1] < par$slope_threshold & any(d$supertrend_buy[(i-2):i] == 1)
+    #  logic_buy_3 <- d$supertrend_long_delta[i] >= param$slope_threshold & d$supertrend_long_delta[i-1] < param$slope_threshold & any(d$supertrend_buy[(i-2):i] == 1)
     #  if (logic_buy_3) logic_buy <- logic_buy_3
     #  
     #}
@@ -136,7 +136,7 @@ for (i in 3:(nrow(d)-1)) {
     
     if (logic_buy) {
       
-      #trade_limit_price <- get_best_order_price(par$symbol)$bid_price*1.0001
+      #trade_limit_price <- get_best_order_price(param$symbol)$bid_price*1.0001
       #trade_units <- get_account_balance('USD')$free / trade_limit_price
       trade_units <- 0.003
       
@@ -186,13 +186,13 @@ for (i in 3:(nrow(d)-1)) {
     
     # If there is a strong longer term upward trend, hold even when there are short term dips
     #if (!is.na(d$supertrend_long_delta[i])) {
-    #  tmp <- d$supertrend_long_delta[i] > abs(par$slope_threshold)
+    #  tmp <- d$supertrend_long_delta[i] > abs(param$slope_threshold)
     #  if (tmp) logic_sell <- !tmp
     #}
     
     ### Third sell trigger if longer range (daily) supertrend detects am extended downward trend
     #if (!is.na(d$supertrend_long_delta[i])) {
-    #  logic_sell_3 <- d$supertrend_long_delta[i] < par$slope_threshold & d$supertrend_long_delta[i-1] > par$slope_threshold
+    #  logic_sell_3 <- d$supertrend_long_delta[i] < param$slope_threshold & d$supertrend_long_delta[i-1] > param$slope_threshold
     #  if (logic_sell_3) logic_sell <- logic_sell_3
     #} 
     
@@ -255,9 +255,9 @@ msg <- glue("{tot_trades} trades in {tot_days} days ({round(tot_trades/as.numeri
               {tot_prop_change}% growth ({round(tot_prop_change/tot_trades, 2)}% per trade)")
 
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
-par(mfrow=c(3,1))
+param(mfrow=c(3,1))
 
-plot(d$date_time, d$supertrend_long, type='l', col='blue2', ylim=range(c(d$supertrend_long, d$mean), na.rm=T), main=par$symbol)
+plot(d$date_time, d$supertrend_long, type='l', col='blue2', ylim=range(c(d$supertrend_long, d$mean), na.rm=T), main=param$symbol)
 lines(d$date_time, d$high)
 abline(v=trades$date_time[trades$action == 'buy'], col='green3')
 abline(v=trades$date_time[trades$action == 'sell'], col='red3')
@@ -273,7 +273,7 @@ abline(v=0)
 abline(v=median(tmp$rate), lty=1, col='blue')
 abline(v=quantile(tmp$rate, probs=c(0.0275, 0.975)), lty=2, col='blue')
 
-par(mfrow=c(1,1))
+param(mfrow=c(1,1))
 
 
 

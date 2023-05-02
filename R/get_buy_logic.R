@@ -1,4 +1,4 @@
-get_buy_logic <- function(d, t, par, live=FALSE) {
+get_buy_logic <- function(d, t, param, live=FALSE) {
 
   logic_buy <- FALSE
 
@@ -11,20 +11,20 @@ get_buy_logic <- function(d, t, par, live=FALSE) {
 
       message(":: Logic BUY 1 (short term buy) ::")
 
-      if (par$double_check) {
+      if (param$double_check) {
 
         message(":: Double-checking BUY trigger ::")
         Sys.sleep(10)
 
         # Get hourly (or other small-scale time interval)
-        tmp <- get_klines(symbol=par$symbol,
-                        interval = par$interval_short,
-                        limit = par$limit,
+        tmp <- get_klines(symbol=param$symbol,
+                        interval = param$interval_short,
+                        limit = param$limit,
                         verbose = FALSE)
 
         tmp <- cbind(tmp, clean_dates(tmp$time_open))
 
-        st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=par$n_supertrend_short, f=par$f_supertrend_short_buy)
+        st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=param$n_supertrend_short, f=param$f_supertrend_short_buy)
         tmp$supertrend_1_buy <- st$buy
 
         logic_buy <- tmp$supertrend_1_buy[t] == 1
@@ -41,7 +41,7 @@ get_buy_logic <- function(d, t, par, live=FALSE) {
   # BUY IF short-term buy directly preceded long-term uptrend shift
   if (!is.na(d$EMA_1_slope[t-1])) {
 
-    logic_buy_3 <- d$EMA_1_slope[t] >= par$slope_threshold_buy & d$EMA_1_slope[t-1] < par$slope_threshold_buy & any(d$supertrend_1_buy[(t-2):t] == 1)
+    logic_buy_3 <- d$EMA_1_slope[t] >= param$slope_threshold_buy & d$EMA_1_slope[t-1] < param$slope_threshold_buy & any(d$supertrend_1_buy[(t-2):t] == 1)
 
     if (logic_buy_3) {
       logic_buy <- logic_buy_3
@@ -67,7 +67,7 @@ get_buy_logic <- function(d, t, par, live=FALSE) {
   # Only allow BUY if not in long term downward trend
   if (!is.na(d$EMA_1_slope[t])) {
 
-    logic_buy_2 <- d$EMA_1_slope[t] >= par$slope_threshold_buy
+    logic_buy_2 <- d$EMA_1_slope[t] >= param$slope_threshold_buy
     if (!logic_buy_2) message(":: Hold (long term downtrend) ::")
     logic_buy <- logic_buy & logic_buy_2
 

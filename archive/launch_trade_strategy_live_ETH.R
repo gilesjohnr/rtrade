@@ -17,7 +17,7 @@ if (TRUE) {
   
 }
 
-par <- list(
+param <- list(
   
   asset = 'ETH',
   symbol = 'ETHUSD',
@@ -52,14 +52,14 @@ while (TRUE) {
     #-------------------------------------------------------------------------
     
     # Get daily data
-    d_long <- get_klines(symbol=par$symbol,
-                         interval = par$interval_long,
-                         limit = par$limit,
+    d_long <- get_klines(symbol=param$symbol,
+                         interval = param$interval_long,
+                         limit = param$limit,
                          verbose = FALSE)
     
     d_long <- cbind(d_long, clean_dates(d_long$time_open))
     
-    st <- calc_supertrend(HLC=d_long[,c("high","low","close")], n=par$n_supertrend_long, f=par$f_supertrend_long)
+    st <- calc_supertrend(HLC=d_long[,c("high","low","close")], n=param$n_supertrend_long, f=param$f_supertrend_long)
     d_long$supertrend_long <- st$supertrend
     d_long$supertrend_buy_long <- st$buy
     d_long$supertrend_sell_long <- st$sell
@@ -69,19 +69,19 @@ while (TRUE) {
     
     
     # Get hourly (or other small-scale time interval)
-    d <- get_klines(symbol=par$symbol,
-                    interval = par$interval_short,
-                    limit = par$limit,
+    d <- get_klines(symbol=param$symbol,
+                    interval = param$interval_short,
+                    limit = param$limit,
                     verbose = FALSE)
     
     d <- cbind(d, clean_dates(d$time_open))
     
-    st <- calc_supertrend(HLC=d[,c("high","low","close")], n=par$n_supertrend_short, f=par$f_supertrend_short)
+    st <- calc_supertrend(HLC=d[,c("high","low","close")], n=param$n_supertrend_short, f=param$f_supertrend_short)
     d$supertrend <- st$supertrend
     d$supertrend_buy <- st$buy
     d$supertrend_sell <- st$sell
     
-    d$atr <- as.data.frame(ATR(d[,c("high","low","close")], n=par$n_atr))$atr
+    d$atr <- as.data.frame(ATR(d[,c("high","low","close")], n=param$n_atr))$atr
     
     # Combine
     d <- merge(d, d_long[,c('date_time', 'supertrend_long', 'supertrend_long_delta')], by='date_time', all.x=T)
@@ -99,21 +99,21 @@ while (TRUE) {
     
     # High and low sell triggers are based on the ATR in the past 24hrs.
     sel <- which(d$date_time >= d$date_time[t] - 24*60*60)
-    par$sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T) * 1.0275
-    par$sell_trigger_high <- -1*par$sell_trigger_low * par$risk_ratio # Risk ratio of 4:1
+    param$sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T) * 1.0275
+    param$sell_trigger_high <- -1*param$sell_trigger_low * param$risk_ratio # Risk ratio of 4:1
     
     
     
     if (F) {
       
-      par(mfrow=c(2,1))
+      param(mfrow=c(2,1))
       
       plot_candles(tail(d, n=480))
       lines(d$date_time, d$mean)
-      lines(d$date_time, d$supertrend, type='l', lwd=2, col='orange2', ylim=range(c(d$supertrend, d$mean), na.rm=T), main=par$symbol)
-      lines(d$date_time, d$supertrend_long, type='l', lwd=2, col='purple2', ylim=range(c(d$supertrend, d$mean), na.rm=T), main=par$symbol)
+      lines(d$date_time, d$supertrend, type='l', lwd=2, col='orange2', ylim=range(c(d$supertrend, d$mean), na.rm=T), main=param$symbol)
+      lines(d$date_time, d$supertrend_long, type='l', lwd=2, col='purple2', ylim=range(c(d$supertrend, d$mean), na.rm=T), main=param$symbol)
       
-      sel <- d$supertrend_long_delta > par$slope_threshold
+      sel <- d$supertrend_long_delta > param$slope_threshold
       abline(v=d$date_time[sel][d$supertrend_buy[sel] == 1], col='green3')
       abline(v=d$date_time[sel][d$supertrend_sell[sel] == 1], col='red3')
       
@@ -137,7 +137,7 @@ while (TRUE) {
       abline(v=median(rates), lty=1, lwd=2, col='blue')
       abline(v=quantile(rates, probs=c(0.0275, 0.975)), lty=2, lwd=2, col='blue')
       
-      par(mfrow=c(1,1))
+      param(mfrow=c(1,1))
       
       x <- 500
       x*(1+median(rates))^(length(rates))
@@ -153,11 +153,11 @@ while (TRUE) {
     
     bal <- get_account_balance()
     bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-    bal_sym <- bal$USD[bal$asset == par$asset]
+    bal_sym <- bal$USD[bal$asset == param$asset]
     if (length(bal_sym) == 0) bal_sym <- 0
-    #message(paste0(capture.output(as.data.frame(bal[bal$asset %in% c(par$asset, 'USD'),])), collapse = "\n"))
+    #message(paste0(capture.output(as.data.frame(bal[bal$asset %in% c(param$asset, 'USD'),])), collapse = "\n"))
     
-    last_order <- get_last_order(par$symbol, status='FILLED')
+    last_order <- get_last_order(param$symbol, status='FILLED')
     
     
     #-------------------------------------------------------------------------
@@ -170,13 +170,13 @@ while (TRUE) {
       # BUY strategy
       #-------------------------------------------------------------------------
       
-      message(glue("{timestamp} | mode: BUY | {par$symbol} = {current_price}"))
+      message(glue("{timestamp} | mode: BUY | {param$symbol} = {current_price}"))
       
       logic_buy <- d$supertrend_buy[t] == 1 
       if (error_state) logic_buy <- logic_buy | d$supertrend_buy[t-1] == 1
       if (logic_buy) message(":: Logic BUY 1 ::")
       
-      logic_buy_2 <- d$supertrend_long_delta[t] >= par$slope_threshold
+      logic_buy_2 <- d$supertrend_long_delta[t] >= param$slope_threshold
       if (logic_buy_2) message(":: Logic BUY 2 ::")
       logic_buy <- logic_buy & logic_buy_2
       
@@ -185,10 +185,10 @@ while (TRUE) {
         tryCatch({
           
           # TRY 1
-          tmp <- get_order_depth(par$symbol)
+          tmp <- get_order_depth(param$symbol)
           bid <- tmp$bid_price[1]
           
-          buy_order <- create_order(symbol = par$symbol,
+          buy_order <- create_order(symbol = param$symbol,
                                     side = 'BUY',
                                     type = 'LIMIT',
                                     price = bid,
@@ -196,21 +196,21 @@ while (TRUE) {
                                     time_in_force = 'GTC',
                                     time_window = 10000)
           
-          Sys.sleep(par$sleep_bt_orders+10)
-          tmp <- get_order(par$symbol, buy_order$orderId)
+          Sys.sleep(param$sleep_bt_orders+10)
+          tmp <- get_order(param$symbol, buy_order$orderId)
           
 
           if (tmp$status != "FILLED") { # TRY 2
             
-            cancel_order(par$symbol, buy_order$orderId); Sys.sleep(1)
+            cancel_order(param$symbol, buy_order$orderId); Sys.sleep(1)
             
             bal <- get_account_balance()
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
             
-            tmp <- get_order_depth(par$symbol)
+            tmp <- get_order_depth(param$symbol)
             bid <- tmp$bid_price[1] + ((tmp$bid_price[1] - tmp$bid_price[2])*0.25)
             
-            buy_order <- create_order(symbol = par$symbol,
+            buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
                                       type = 'LIMIT',
                                       price = bid,
@@ -218,18 +218,18 @@ while (TRUE) {
                                       time_in_force = 'GTC',
                                       time_window = 10000)
             
-            Sys.sleep(par$sleep_bt_orders)
-            tmp <- get_order(par$symbol, buy_order$orderId)
+            Sys.sleep(param$sleep_bt_orders)
+            tmp <- get_order(param$symbol, buy_order$orderId)
             
             
             if (tmp$status != "FILLED") { # TRY 3
               
-              cancel_order(par$symbol, buy_order$orderId); Sys.sleep(1)
+              cancel_order(param$symbol, buy_order$orderId); Sys.sleep(1)
               
-              buy_order <- create_order(symbol = par$symbol,
+              buy_order <- create_order(symbol = param$symbol,
                                         side = 'BUY',
                                         type = 'MARKET',
-                                        quantity = bal$free[bal$asset == par$asset],
+                                        quantity = bal$free[bal$asset == param$asset],
                                         time_in_force = 'IOC',
                                         time_window = 10000)
               
@@ -250,10 +250,10 @@ while (TRUE) {
         }, error = function(e) {
           
           
-          buy_order <- create_order(symbol = par$symbol,
+          buy_order <- create_order(symbol = param$symbol,
                                     side = 'BUY',
                                     type = 'MARKET',
-                                    quantity = bal$free[bal$asset == par$asset],
+                                    quantity = bal$free[bal$asset == param$asset],
                                     time_in_force = 'IOC',
                                     time_window = 10000)
           
@@ -271,26 +271,26 @@ while (TRUE) {
       # SELL strategy
       #-------------------------------------------------------------------------
       
-      message(glue("{timestamp} | mode: SELL | {par$symbol} = {current_price}"))
+      message(glue("{timestamp} | mode: SELL | {param$symbol} = {current_price}"))
       
       # Basic trigger from supertrend
       logic_sell <- d$supertrend_sell[t] == 1 
       if (error_state) logic_sell <- logic_sell | d$supertrend_sell[t-1] == 1
       if (logic_sell) message(":: Logic SELL 1 ::")
 
-      tmp <- get_all_orders(par$symbol)
+      tmp <- get_all_orders(param$symbol)
       tmp <- tmp[tmp$status == 'FILLED' & tmp$side == 'BUY',]
       tmp <- tmp[which.max(tmp$date_time),]  
       buy_price <- as.numeric(tmp$price)
       
       gain <- current_price / buy_price - 1
-      logic_sell_2 <- gain > par$sell_trigger_high | gain < par$sell_trigger_low
+      logic_sell_2 <- gain > param$sell_trigger_high | gain < param$sell_trigger_low
       if (logic_sell_2) logic_sell <- logic_sell_2
       if (is.na(logic_sell)) logic_sell <- logic_sell_2
       if (logic_sell_2) message(":: Logic SELL 2 ::")
       
       ## Third sell trigger: if longer-range supertrend detects an extended downward trend
-      logic_sell_3 <- d$supertrend_long_delta[t] < par$slope_threshold
+      logic_sell_3 <- d$supertrend_long_delta[t] < param$slope_threshold
       if (logic_sell_3) logic_sell <- logic_sell_3
       if (logic_sell_3) message(":: Logic SELL 3 ::")
       
@@ -301,45 +301,45 @@ while (TRUE) {
           
           # TRY 1
         
-          sell_order <- create_order(symbol = par$symbol,
+          sell_order <- create_order(symbol = param$symbol,
                                      side = 'SELL',
                                      type = 'LIMIT',
-                                     price = get_order_depth(par$symbol)$ask_price[1],
-                                     quantity = bal$free[bal$asset == par$asset],
+                                     price = get_order_depth(param$symbol)$ask_price[1],
+                                     quantity = bal$free[bal$asset == param$asset],
                                      time_in_force = 'GTC',
                                      time_window = 10000)
           
-          Sys.sleep(par$sleep_bt_orders+10)
-          tmp <- get_order(par$symbol, sell_order$orderId)
+          Sys.sleep(param$sleep_bt_orders+10)
+          tmp <- get_order(param$symbol, sell_order$orderId)
           
           
 
             if (tmp$status != "FILLED") { # TRY 2
               
-              cancel_order(par$symbol, sell_order$orderId); Sys.sleep(1)
+              cancel_order(param$symbol, sell_order$orderId); Sys.sleep(1)
               bal <- get_account_balance()
-              tmp <- get_order_depth(par$symbol)
+              tmp <- get_order_depth(param$symbol)
               
-              sell_order <- create_order(symbol = par$symbol,
+              sell_order <- create_order(symbol = param$symbol,
                                          side = 'SELL',
                                          type = 'LIMIT',
                                          price = tmp$ask_price[1] - ((tmp$ask_price[2] - tmp$ask_price[1])*0.25),
-                                         quantity = bal$free[bal$asset == par$asset],
+                                         quantity = bal$free[bal$asset == param$asset],
                                          time_in_force = 'GTC',
                                          time_window = 10000)
               
-              Sys.sleep(par$sleep_bt_orders)
-              tmp <- get_order(par$symbol, sell_order$orderId)
+              Sys.sleep(param$sleep_bt_orders)
+              tmp <- get_order(param$symbol, sell_order$orderId)
               
               
               if (tmp$status != "FILLED") { # TRY 3
                 
-                cancel_order(par$symbol, sell_order$orderId); Sys.sleep(1)
+                cancel_order(param$symbol, sell_order$orderId); Sys.sleep(1)
                 
-                sell_order <- create_order(symbol = par$symbol,
+                sell_order <- create_order(symbol = param$symbol,
                                            side = 'SELL',
                                            type = 'MARKET',
-                                           quantity = bal$free[bal$asset == par$asset],
+                                           quantity = bal$free[bal$asset == param$asset],
                                            time_in_force = 'IOC',
                                            time_window = 10000)
                 
@@ -359,10 +359,10 @@ while (TRUE) {
         }, error = function(e) {
           
           
-          sell_order <- create_order(symbol = par$symbol,
+          sell_order <- create_order(symbol = param$symbol,
                                      side = 'SELL',
                                      type = 'MARKET',
-                                     quantity = bal$free[bal$asset == par$asset],
+                                     quantity = bal$free[bal$asset == param$asset],
                                      time_in_force = 'IOC',
                                      time_window = 10000)
           
@@ -377,7 +377,7 @@ while (TRUE) {
     }
     
     error_state <- FALSE
-    Sys.sleep(par$sleep_bt_runs)
+    Sys.sleep(param$sleep_bt_runs)
     
   }, error = function(e) {
     

@@ -8,7 +8,7 @@ if (FALSE) {
   path <- 'funcs'
   for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
   
-  par <- list(
+  param <- list(
     
     instrument = 'BTCUSD',
     
@@ -23,7 +23,7 @@ if (FALSE) {
 
 
 
-d_day <- get_oanda_data(par, 
+d_day <- get_oanda_data(param, 
                         instrument=instrument, 
                         granularity='D',
                         date_start = Sys.Date()-1 - 200,
@@ -38,7 +38,7 @@ d_day$supertrend_buy_day <- st$buy
 d_day$supertrend_sell_day <- st$sell
 
 
-d <- get_oanda_data(par, 
+d <- get_oanda_data(param, 
                     instrument=instrument, 
                     granularity='H1',
                     date_start = Sys.Date()-1 - 100,
@@ -68,13 +68,13 @@ if (F) {
 trades <- data.frame()
 state <- NA
 
-get_trade_units <- function(par, instrument) {
+get_trade_units <- function(param, instrument) {
   
-  bal <- as.numeric(get_account_info(par)$account$balance)
-  floor(bal/get_current_price(par, instrument)$ask)
+  bal <- as.numeric(get_account_info(param)$account$balance)
+  floor(bal/get_current_price(param, instrument)$ask)
   
 }
-get_trade_units <- function(par, instrument) 100
+get_trade_units <- function(param, instrument) 100
 
 
 for (i in 1:nrow(d)) {
@@ -91,9 +91,9 @@ for (i in 1:nrow(d)) {
     
     if (logic_buy) {
       
-      trade_units <- get_trade_units(par, instrument)
+      trade_units <- get_trade_units(param, instrument)
       if (nrow(trades) > 0) trade_units <- trades[nrow(trades), 'total_value']/(d$mean[i] + spread)
-      #trade_limit_price <- get_current_price(par, instrument)$ask
+      #trade_limit_price <- get_current_price(param, instrument)$ask
       
       # Submit buy order
       
@@ -184,7 +184,7 @@ msg <- glue("{tot_trades} trades in {tot_days} days ({round(tot_trades/as.numeri
               {tot_prop_change}% growth ({round(tot_prop_change/tot_trades, 2)}% per trade)")
 
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
-par(mfrow=c(3,1))
+param(mfrow=c(3,1))
 
 plot(d$date_time, d$supertrend_day, type='l', col='blue2', ylim=range(c(d$supertrend_day, d$mean), na.rm=T), main=instrument)
 lines(d$date_time, d$high)
@@ -201,7 +201,7 @@ abline(v=0)
 abline(v=mean(tmp$rate), lty=1, col='blue')
 abline(v=quantile(tmp$rate, probs=c(0.0275, 0.975)), lty=2, col='blue')
 
-par(mfrow=c(1,1))
+param(mfrow=c(1,1))
 
 
 

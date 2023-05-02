@@ -25,7 +25,7 @@ data("handle")
 # Define default parameters
 #-------------------------------------------------------------------------------
 
-par <- list(
+param <- list(
 
   asset = 'BTC',
   symbol = 'BTCUSD',
@@ -76,20 +76,20 @@ Y[,9] <- qunif(Y[,9], 6, 24)   # n_ema_1
 Y[,10] <- qunif(Y[,10], 6, 24)   # n_ema_2
 
 
-map_lhs_to_par <- function(Y, par, i) {
+map_lhs_to_param <- function(Y, param, i) {
 
-  tmp_par <- par
-  tmp_par$slope_threshold_buy <- Y[i,1]
-  tmp_par$slope_threshold_sell <- Y[i,2]
-  tmp_par$risk_ratio <- Y[i,3]
-  tmp_par$n_supertrend_short <- Y[i,4]
-  tmp_par$f_supertrend_short_buy <- Y[i,5]
-  tmp_par$f_supertrend_short_sell <- Y[i,6]
-  tmp_par$n_atr <- Y[i,7]
-  tmp_par$f_atr <- Y[i,8]
-  tmp_par$n_ema_1 <- Y[i,9]
-  tmp_par$n_ema_2 <- Y[i,10]
-  return(tmp_par)
+  tmp_param <- param
+  tmp_param$slope_threshold_buy <- Y[i,1]
+  tmp_param$slope_threshold_sell <- Y[i,2]
+  tmp_param$risk_ratio <- Y[i,3]
+  tmp_param$n_supertrend_short <- Y[i,4]
+  tmp_param$f_supertrend_short_buy <- Y[i,5]
+  tmp_param$f_supertrend_short_sell <- Y[i,6]
+  tmp_param$n_atr <- Y[i,7]
+  tmp_param$f_atr <- Y[i,8]
+  tmp_param$n_ema_1 <- Y[i,9]
+  tmp_param$n_ema_2 <- Y[i,10]
+  return(tmp_param)
 
 }
 
@@ -105,9 +105,9 @@ t_start <- proc.time()
 for (i in 1:n) {
 
   message(i)
-  tmp_par <- map_lhs_to_par(Y, par, i)
+  tmp_param <- map_lhs_to_param(Y, param, i)
 
-  tmp <- run_trade_algo(par=tmp_par, live=FALSE)
+  tmp <- run_trade_algo(param=tmp_param, live=FALSE)
 
   out <- rbind(out,
                data.frame(i = i,
@@ -139,15 +139,15 @@ out_best[1:10,]
 
 
 
-par_best <- map_lhs_to_par(Y, par, i=out_best$i[1])
+param_best <- map_lhs_to_param(Y, param, i=out_best$i[1])
 
 if (FALSE) {
 
-  par_best <- map_lhs_to_par(Y, par, i=4255) # Manual override
+  param_best <- map_lhs_to_param(Y, param, i=4255) # Manual override
 
 }
 
-best <- run_trade_algo(par=par_best, live=FALSE)
+best <- run_trade_algo(param=param_best, live=FALSE)
 
 
 
@@ -164,7 +164,7 @@ trades <- best$trades
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
 par(mfrow=c(3,1), xpd=F)
 
-plot(d$date_time, d$supertrend_1, type='l', col='blue2', ylim=range(c(d$supertrend_1, d$mean), na.rm=T), main=par$symbol)
+plot(d$date_time, d$supertrend_1, type='l', col='blue2', ylim=range(c(d$supertrend_1, d$mean), na.rm=T), main=param$symbol)
 lines(d$date_time, d$close)
 abline(v=trades$date_time[trades$action == 'buy'], col='green3')
 abline(v=trades$date_time[trades$action == 'sell'], col='red3')
@@ -190,13 +190,13 @@ par(mfrow=c(1,1))
 # Cache best fit parameters
 #-------------------------------------------------------------------------------
 
-path_cached_params <- file.path(getwd(), 'output', 'par_best.rds')
-saveRDS(par_best, path_cached_params)
+path_cached_params <- file.path(getwd(), 'output', 'param_best.rds')
+saveRDS(param_best, path_cached_params)
 
 
 if (FALSE) {
 
-  par_best <- readRDS(path_cached_params)
+  param_best <- readRDS(path_cached_params)
 
 }
 
@@ -206,7 +206,7 @@ if (FALSE) {
 # Run calibrated trading algorithm LIVE
 #-------------------------------------------------------------------------------
 
-run_trade_algo(par=par_best, live=TRUE)
+run_trade_algo(param=param_best, live=TRUE)
 
 
 

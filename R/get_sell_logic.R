@@ -1,17 +1,17 @@
-get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
+get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL) {
 
 
-  if (par$manual_sell_triggers) {
+  if (param$manual_sell_triggers) {
 
-    sell_trigger_low <- par$manual_sell_trigger_low
-    sell_trigger_high <- par$manual_sell_trigger_high
+    sell_trigger_low <- param$manual_sell_trigger_low
+    sell_trigger_high <- param$manual_sell_trigger_high
 
   } else {
 
     # High and low sell triggers are based on the ATR in the past 30 minutes.
     sel <- which(d$date_time >= max(d$date_time) - 60*60)
-    sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T)*par$f_atr
-    sell_trigger_high <- -1*sell_trigger_low * par$risk_ratio
+    sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T)*param$f_atr
+    sell_trigger_high <- -1*sell_trigger_low * param$risk_ratio
 
   }
 
@@ -31,12 +31,12 @@ get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
 
     message(":: Logic SELL 1 (short sell) ::")
 
-    if (par$double_check) {
+    if (param$double_check) {
 
       message(":: Double-checking SELL trigger ::")
       Sys.sleep(10)
 
-      tmp <- compile_data(par)
+      tmp <- compile_data(param)
 
       if (tmp$supertrend_2_sell[t] < tmp$mid[t]) {
         #logic_sell <- d$supertrend_2_sell[t] == 1
@@ -60,7 +60,7 @@ get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
 
   if (live) {
 
-    x <- get_all_orders(par$symbol)
+    x <- get_all_orders(param$symbol)
     x <- x[x$status == 'FILLED' & x$side == 'BUY',]
     x <- x[which.max(x$date_time),]
     buy_price <- as.numeric(x$price)
@@ -80,7 +80,7 @@ get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
   }
 
   ## SELL IF longer-range supertrend detects an extended downward trend
-  #logic_sell_3 <- d$EMA_2_slope[t] < par$slope_threshold_sell & d$EMA_2_slope[t-1] >= par$slope_threshold_sell
+  #logic_sell_3 <- d$EMA_2_slope[t] < param$slope_threshold_sell & d$EMA_2_slope[t-1] >= param$slope_threshold_sell
   #if (logic_sell_3) {
   #  logic_sell <- logic_sell_3
   #  message(":: Logic SELL 3 (downtrend detected) ::")
@@ -96,7 +96,7 @@ get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
 
   # If there is a strong longer term upward trend, hold even when there are short term dips
   if (!is.na(d$EMA_2_slope[t])) {
-    tmp <- d$EMA_2_slope[t] > par$slope_threshold_sell
+    tmp <- d$EMA_2_slope[t] > param$slope_threshold_sell
     if (tmp) {
       logic_sell <- !tmp
       message(glue(":: Hold (uptrend) ::"))

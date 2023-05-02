@@ -8,7 +8,7 @@ invisible(lapply(pkg, library, character.only=TRUE))
 path <- 'funcs'
 for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
 
-par <- list(
+param <- list(
   
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
@@ -30,9 +30,9 @@ par <- list(
 
 
 # Get hourly (or other small-scale time interval)
-d <- get_klines(symbol = par$symbol,
-                interval = par$interval_short,
-                limit = par$limit,
+d <- get_klines(symbol = param$symbol,
+                interval = param$interval_short,
+                limit = param$limit,
                 verbose = FALSE)
 
 d <- cbind(d, clean_dates(d$time_open))
@@ -51,7 +51,7 @@ d$supertrend_2 <- st$supertrend
 d$supertrend_2_buy <- st$buy
 d$supertrend_2_sell <- st$sell
 
-d$EMA <- EMA(d[,"close"], n=par$n_ema) # Exponential Moving Average
+d$EMA <- EMA(d[,"close"], n=param$n_ema) # Exponential Moving Average
 k <- 1
 for (i in (k+1):nrow(d)) d$EMA[i] <- mean(d$EMA[(i-k):i], na.rm=T)
 
@@ -61,21 +61,21 @@ for (i in (k+1):nrow(d)) d$EMA[i] <- mean(d$EMA[(i-k):i], na.rm=T)
 for (i in 2:nrow(d)) d$EMA_slope[i] <- d$EMA[i] - d$EMA[i-1]
 
 
-if (par$manual_sell_triggers) {
+if (param$manual_sell_triggers) {
   
-  sell_trigger_low <- par$manual_sell_trigger_low
-  sell_trigger_high <- par$manual_sell_trigger_high
+  sell_trigger_low <- param$manual_sell_trigger_low
+  sell_trigger_high <- param$manual_sell_trigger_high
   
 } else {
   
   sel <- which(d$date_time >= max(d$date_time) - 60*60*1)
   sell_trigger_low <- -1*max(d$atr[sel]/d$mean[sel], na.rm=T)*1.01
-  sell_trigger_high <- -1*sell_trigger_low * par$risk_ratio
+  sell_trigger_high <- -1*sell_trigger_low * param$risk_ratio
   
 }
 
-slope_threshold_buy <- quantile(d$EMA_slope, na.rm=TRUE, probs=par$prob_slope_threshold_buy) # below this, do not buy
-slope_threshold_sell <- quantile(d$EMA_slope, na.rm=TRUE, probs=par$prob_slope_threshold_sell) # above this, do not sell
+slope_threshold_buy <- quantile(d$EMA_slope, na.rm=TRUE, probs=param$prob_slope_threshold_buy) # below this, do not buy
+slope_threshold_sell <- quantile(d$EMA_slope, na.rm=TRUE, probs=param$prob_slope_threshold_sell) # above this, do not sell
 
 slope_threshold_buy <- -1
 slope_threshold_sell <- 1
@@ -243,7 +243,7 @@ msg <- glue("{tot_trades} trades in {tot_days} days ({round(tot_trades/as.numeri
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
 par(mfrow=c(3,1))
 
-plot(d$date_time, d$supertrend_1, type='l', col='blue2', ylim=range(c(d$supertrend_1, d$mean), na.rm=T), main=par$symbol)
+plot(d$date_time, d$supertrend_1, type='l', col='blue2', ylim=range(c(d$supertrend_1, d$mean), na.rm=T), main=param$symbol)
 lines(d$date_time, d$close)
 abline(v=trades$date_time[trades$action == 'buy'], col='green3')
 abline(v=trades$date_time[trades$action == 'sell'], col='red3')

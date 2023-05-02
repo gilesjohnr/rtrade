@@ -12,14 +12,14 @@ all_dates <- seq(as.Date("2010-01-01"), as.Date("2023-03-23"), 1)
 for (i in instruments) {
 
   i
-  tmp <- get_oanda_data(par,
+  tmp <- get_oanda_data(param,
                         instrument=i,
                         granularity='M',
                         date_start=all_dates[1],
                         date_stop=all_dates[length(all_dates)])
   head(tmp, n=3)
 
-  arrow::write_parquet(tmp, sink=file.path(getwd(), glue('data/historical_data_{i}_month.parquet')))
+  arrow::write_paramquet(tmp, sink=file.path(getwd(), glue('data/historical_data_{i}_month.paramquet')))
 
 
 }
@@ -33,7 +33,7 @@ for (i in instruments) {
 
 
 # Get data from Oanda server
-d <- get_oanda_data(par,
+d <- get_oanda_data(param,
                     instrument='EUR_USD',
                     granularity='H1',
                     date_start='2020-08-01',
@@ -127,7 +127,7 @@ for (i in 1:(nrow(tmp)-1)) {
 
 }
 
-par(mfrow=c(1,2))
+param(mfrow=c(1,2))
 hist(test$rate, breaks=30, main=round(mean(test$rate),5))
 abline(v=0)
 abline(v=mean(test$rate), lty=2, col='blue')
@@ -135,7 +135,7 @@ abline(v=mean(test$rate), lty=2, col='blue')
 hist(test$pips, breaks=30, main=round(mean(test$pips), 2))
 abline(v=0)
 abline(v=mean(test$pips), lty=2, col='purple')
-par(mfrow=c(1,1))
+param(mfrow=c(1,1))
 
 spread <- 0.0001 * 3
 principal <- 5000
@@ -207,18 +207,18 @@ format(tot, big.mark=',')
 
 
 
-create_order(symbol = par$symbol,
+create_order(symbol = param$symbol,
              side = 'BUY',
              type = 'MARKET',
-             quantity = round(bal_usd/get_ticker_price(par$symbol)$price, 4) - 0.0001,
+             quantity = round(bal_usd/get_ticker_price(param$symbol)$price, 4) - 0.0001,
              time_in_force = 'IOC',
              time_window = 10000)
 
 
-create_order(symbol = par$symbol,
+create_order(symbol = param$symbol,
              side = 'SELL',
              type = 'MARKET',
-             quantity = bal$free[bal$asset == par$asset],
+             quantity = bal$free[bal$asset == param$asset],
              time_in_force = 'IOC',
              time_window = 10000)
 
@@ -226,7 +226,7 @@ create_order(symbol = par$symbol,
 
 
 
-#timestep_duration <- as.integer(strsplit(par$interval_short, 'm')[[1]])
+#timestep_duration <- as.integer(strsplit(param$interval_short, 'm')[[1]])
 #
 #tmp <- seq(0, 60, timestep_duration)
 #tmp <- tmp[!tmp==60]
