@@ -10,18 +10,18 @@ instruments <- c('EUR_USD', 'AUD_USD', 'GBP_USD')
 all_dates <- seq(as.Date("2010-01-01"), as.Date("2023-03-23"), 1)
 
 for (i in instruments) {
-  
+
   i
-  tmp <- get_oanda_data(par, 
-                        instrument=i, 
+  tmp <- get_oanda_data(par,
+                        instrument=i,
                         granularity='M',
                         date_start=all_dates[1],
                         date_stop=all_dates[length(all_dates)])
   head(tmp, n=3)
-  
+
   arrow::write_parquet(tmp, sink=file.path(getwd(), glue('data/historical_data_{i}_month.parquet')))
-  
-  
+
+
 }
 
 
@@ -33,8 +33,8 @@ for (i in instruments) {
 
 
 # Get data from Oanda server
-d <- get_oanda_data(par, 
-                    instrument='EUR_USD', 
+d <- get_oanda_data(par,
+                    instrument='EUR_USD',
                     granularity='H1',
                     date_start='2020-08-01',
                     date_stop='2021-02-01')
@@ -112,19 +112,19 @@ tmp <- d[d$buy == 1 | d$sell == 1,]
 test <- data.frame()
 
 for (i in 1:(nrow(tmp)-1)) {
-  
+
   if (tmp$buy[i] == 1) {
-    
+
     test <- rbind(test,
-                  data.frame(date_time=tmp$date_time[i], 
+                  data.frame(date_time=tmp$date_time[i],
                              trade=row.names(tmp[i,]),
                              price_buy = tmp$mean[i],
                              price_sell = tmp$mean[i+1],
                              rate = (tmp$mean[i+1]/tmp$mean[i])-1,
                              pips = (tmp$mean[i+1] - tmp$mean[i]) / 0.0001))
-    
+
   }
-  
+
 }
 
 par(mfrow=c(1,2))
@@ -157,28 +157,28 @@ spread <- 0.0001 * 0.2
 tab <- data.frame()
 
 for (i in 1:nrow(d)) {
-  
+
   if (nrow(tab) == 0 & d$buy[i] == 1 & d$rsi[i] < 80 & d$adx_neg[i] < 20 & d$volume[i] > 1000) {
-    
+
     tab <- rbind(tab, d[i,])
-    
+
   } else if (nrow(tab) > 0) {
-    
+
     if (tab$sell[nrow(tab)] == 1 & d$buy[i] == 1 & d$rsi[i] < 80 & d$adx_neg[i] < 20 & d$volume[i] > 1000) tab <- rbind(tab, d[i,])
-    
+
     if (tab$buy[nrow(tab)] == 1 & d$mean[i] >= tab$mean[nrow(tab)]*(1+r)) {
-      
+
       tmp <- d[i,]
       tmp$sell <- 1
       tab <- rbind(tab, tmp)
-      
+
     } else if (tab$buy[nrow(tab)] == 1 & d$sell[i] == 1) {
-      
+
       tab <- rbind(tab, d[i,])
     }
-    
+
   }
-  
+
 }
 
 sells <- tab$mean[tab$sell == 1]
@@ -241,4 +241,18 @@ create_order(symbol = par$symbol,
 #  message(glue(":: Waiting {wait_time} seconds ::"))
 #  Sys.sleep(wait_time)
 #}
+
+
+
+#set config
+usethis::use_git_config(user.name = "John Giles", user.email = "gilesjohnr@gmail.com")
+
+#Go to github page to generate token
+usethis::create_github_token()
+
+#paste your PAT into pop-up that follows...
+credentials::set_github_pat()
+
+#now remotes::install_github() will work
+remotes::install_github("gilesjohnr/rbinanceus")
 
