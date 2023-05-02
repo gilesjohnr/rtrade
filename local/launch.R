@@ -1,10 +1,11 @@
+#-------------------------------------------------------------------------------
+# Setup
+#-------------------------------------------------------------------------------
+
 rm(list=ls())
 
 pkg <- c("rtrade", "rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime', 'TTR', 'lhs')
 invisible(lapply(pkg, library, character.only=TRUE))
-
-#path <- 'funcs'
-#for (i in list.files(path, pattern = "\\.[Rr]$")) source(file.path(path, i))
 
 if (FALSE) {
 
@@ -15,6 +16,13 @@ if (FALSE) {
 
 }
 
+Sys.setenv(TZ='UTC')
+
+
+
+#-------------------------------------------------------------------------------
+# Define default parameters
+#-------------------------------------------------------------------------------
 
 par <- list(
 
@@ -42,25 +50,23 @@ par <- list(
   manual_sell_trigger_low = -0.0025,
   manual_sell_trigger_high = 0.005,
 
-  time_window = 5000,
+  time_window = 4000,
   wait_and_see = TRUE, # wait until time step is a portion complete before acting
   wait_and_see_prop = 1/5
 
 )
 
+n <- 1000 # number of LHS replicates
+min_win_prob <- 0.5 # Minimum win probability
 
 
-
-t_start <- proc.time()
-
-n <- 10
 Y <- randomLHS(n, 10)
 Y[,1] <- qunif(Y[,1], -10, 0)  # slope_threshold_buy
 Y[,2] <- qunif(Y[,2], 0, 10)   # slope_threshold_sell
 Y[,3] <- qunif(Y[,3], 1, 20)   # risk_ratio
 Y[,4] <- qunif(Y[,4], 6, 30)   # n_supertrend_short
-Y[,5] <- qunif(Y[,5], 0.25, 3)   # f_supertrend_short_buy
-Y[,6] <- qunif(Y[,6], 0.25, 3)   # f_supertrend_short_sell
+Y[,5] <- qunif(Y[,5], 0.5, 3)   # f_supertrend_short_buy
+Y[,6] <- qunif(Y[,6], 0.5, 3)   # f_supertrend_short_sell
 Y[,7] <- qunif(Y[,7], 3, 24)   # n_atr
 Y[,8] <- qunif(Y[,8], 1, 2)   # f_atr
 Y[,9] <- qunif(Y[,9], 6, 24)   # n_ema_1
@@ -84,7 +90,15 @@ map_lhs_to_par <- function(Y, par, i) {
 
 }
 
+
+
+#-------------------------------------------------------------------------------
+# Run latin-hypercube sampling
+#-------------------------------------------------------------------------------
+
 out <- data.frame()
+t_start <- proc.time()
+
 for (i in 1:n) {
 
   message(i)
@@ -104,18 +118,37 @@ for (i in 1:n) {
 t_stop <- proc.time() - t_start
 message(paste('Runtime:', round(as.numeric(t_stop["elapsed"])/60, 2), 'minutes'))
 
-min_win_prob <- 0.5
+
+
+#-------------------------------------------------------------------------------
+# Clean up
+#-------------------------------------------------------------------------------
+
 out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
+out$percent_change <- round(out$percent_change, 1)
 sel <- out$win_prob > min_win_prob
 if (!any(sel)) stop('No runs with win probability above threshold')
-out <- out[out$win_prob > min_win_prob,]
 
-out <- out[order(out$percent_change, out$win_prob, decreasing = TRUE),]
-head(out, n=10)
+out_best <- out[out$win_prob > min_win_prob,]
+out_best <- out_best[out_best$n_trades > 1,]
+out_best <- out_best[rev(rank(order(out_best$percent_change, out_best$win_prob), ties.method='first')),]
+out_best[1:10,]
 
-par_best <- map_lhs_to_par(Y, par, i=out$i[1])
+par_best <- map_lhs_to_par(Y, par, i=out_best$i[1])
+
+if (FALSE) {
+
+  par_best <- map_lhs_to_par(Y, par, i=918) # Manual override
+
+}
 
 best <- run_trade_algo(par=par_best, live=FALSE)
+
+
+
+#-------------------------------------------------------------------------------
+# Plot
+#-------------------------------------------------------------------------------
 
 msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$percent_change/best$n_trades, 2)}% per trade)
             Actual = {round( best$data$close[nrow(best$data)]/best$data$close[1] - 1,3)}")
@@ -145,10 +178,8 @@ if (best$n_trades > 1) {
 
 par(mfrow=c(1,1))
 
-
-
-
 saveRDS(par_best, file.path(getwd(), 'output', 'par_best.rds'))
+
 
 
 run_trade_algo(par=par_best, live=TRUE)
