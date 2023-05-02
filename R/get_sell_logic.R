@@ -56,7 +56,7 @@ get_sell_logic <- function(d, t, par, live=TRUE, trades=NULL) {
 
   # SELL IF price moves outside set risk ratio bounds
 
-  current_price <- mean(c(d$mean[t], d$mid[t]))
+  current_price <- d$mid[t]
 
   if (live) {
 

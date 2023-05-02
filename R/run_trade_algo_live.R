@@ -37,7 +37,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
       d <- compile_data(par)
 
       t <- which.max(d$date_time)
-      current_price <- mean(c(d$mean[t], d$mid[t]))
+      current_price <- d$close[t]
 
 
       #-------------------------------------------------------------------------
@@ -75,7 +75,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
             # TRY 1
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
             #bid <- get_order_depth(par$symbol)$bid_price[1]
-            bid <- mean(c(d$close[t], d$mid[t]))
+            bid <- d$mid[t]
 
             buy_order <- create_order(symbol = par$symbol,
                                       side = 'BUY',
@@ -173,7 +173,7 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
 
             # TRY 1
             #ask <- get_order_depth(par$symbol)$ask_price[1]
-            ask <- mean(c(d$close[t], d$mid[t]))
+            ask <- d$mid[t]
 
             sell_order <- create_order(symbol = par$symbol,
                                        side = 'SELL',
