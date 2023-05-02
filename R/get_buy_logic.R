@@ -11,7 +11,7 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
 
       message(":: Logic BUY 1 (short term buy) ::")
 
-      if (param$double_check) {
+      if (live & param$double_check) {
 
         message(":: Double-checking BUY trigger ::")
         Sys.sleep(10)

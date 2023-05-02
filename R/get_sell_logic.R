@@ -31,7 +31,7 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL) {
 
     message(":: Logic SELL 1 (short sell) ::")
 
-    if (param$double_check) {
+    if (live & param$double_check) {
 
       message(":: Double-checking SELL trigger ::")
       Sys.sleep(10)

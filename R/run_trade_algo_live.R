@@ -15,7 +15,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
         tmp <- seq(0, 60, timestep_duration)
         tmp <- tmp[!tmp==60]
-        tmp <- as.POSIXct(glue("{Sys.Date()} {hour(timestamp)}:{tmp}:00", origin = "1970-01-01", tz = Sys.timezone()))
+        tmp <- as.POSIXct(glue("{Sys.Date()} {hour(timestamp)}:{tmp}:00", origin = "1970-01-01", tz = "UTC"))
 
         t1 <- tmp[(tmp - timestamp) < 0]
         t1 <- t1[length(t1)]
@@ -34,7 +34,6 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       #-------------------------------------------------------------------------
 
       d <- compile_data(param)
-
       t <- which.max(d$date_time)
       current_price <- d$close[t]
 
@@ -87,7 +86,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             Sys.sleep(param$sleep_bt_orders)
             tmp <- get_order(param$symbol, buy_order$orderId)
 
-            check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
+            check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
             if (check) { # TRY 2
 
               cancel_order(param$symbol, buy_order$orderId); Sys.sleep(2)
@@ -110,7 +109,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
               Sys.sleep(param$sleep_bt_orders)
               tmp <- get_order(param$symbol, buy_order$orderId)
 
-              check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
+              check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
               if (check) { # TRY 3
 
                 cancel_order(param$symbol, buy_order$orderId); Sys.sleep(2)
@@ -186,7 +185,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             tmp <- get_order(param$symbol, sell_order$orderId)
 
 
-            check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
+            check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
             if (check) { # TRY 2
 
               cancel_order(param$symbol, sell_order$orderId); Sys.sleep(2)
@@ -206,7 +205,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
               Sys.sleep(param$sleep_bt_orders)
               tmp <- get_order(param$symbol, sell_order$orderId)
 
-              check <- !(tmp$status %in% c("FILLED", "paramTIALLY_FILLED")) | !('status' %in% names(tmp))
+              check <- !(tmp$status %in% c("FILLED", "PARTIALLY_FILLED")) | !('status' %in% names(tmp))
               if (check) { # TRY 3
 
                 cancel_order(param$symbol, sell_order$orderId); Sys.sleep(2)
