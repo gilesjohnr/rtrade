@@ -30,7 +30,7 @@ par <- list(
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
-  limit = pmin(1000, 12*24),
+  limit = pmin(1000, 12*12),
 
   slope_threshold_buy = -1, # below this, do not buy
   slope_threshold_sell = 2, # above this, do not sell
@@ -53,7 +53,8 @@ par <- list(
 
   time_window = 4000,
   wait_and_see = TRUE, # wait until time step is a portion complete before acting
-  wait_and_see_prop = 1/5
+  wait_and_see_prop = 1/5,
+  double_check = TRUE
 
 )
 

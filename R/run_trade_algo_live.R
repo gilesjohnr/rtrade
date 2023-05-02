@@ -3,7 +3,6 @@ run_trade_algo_live <- function(par, verbose=TRUE, display=TRUE) {
   error_state <- FALSE
   error_count <- 0
 
-
   while (TRUE) {
 
     tryCatch({
