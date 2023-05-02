@@ -17,6 +17,7 @@ if (FALSE) {
 }
 
 Sys.setenv(TZ='UTC')
+data("handle")
 
 
 
@@ -29,7 +30,7 @@ par <- list(
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
-  limit = pmin(1000, 12*12),
+  limit = pmin(1000, 12*24),
 
   slope_threshold_buy = -1, # below this, do not buy
   slope_threshold_sell = 2, # above this, do not sell
@@ -58,7 +59,6 @@ par <- list(
 
 n <- 1000 # number of LHS replicates
 min_win_prob <- 0.5 # Minimum win probability
-
 
 
 
@@ -136,11 +136,13 @@ out_best <- out_best[out_best$n_trades > 1,]
 out_best <- out_best[rev(rank(order(out_best$percent_change, out_best$win_prob), ties.method='first')),]
 out_best[1:10,]
 
+
+
 par_best <- map_lhs_to_par(Y, par, i=out_best$i[1])
 
 if (FALSE) {
 
-  par_best <- map_lhs_to_par(Y, par, i=918) # Manual override
+  par_best <- map_lhs_to_par(Y, par, i=4255) # Manual override
 
 }
 
@@ -182,9 +184,13 @@ par(mfrow=c(1,1))
 
 
 
+
+#-------------------------------------------------------------------------------
+# Cache best fit parameters
+#-------------------------------------------------------------------------------
+
 path_cached_params <- file.path(getwd(), 'output', 'par_best.rds')
 saveRDS(par_best, path_cached_params)
-
 
 
 if (FALSE) {
@@ -194,4 +200,12 @@ if (FALSE) {
 }
 
 
+
+#-------------------------------------------------------------------------------
+# Run calibrated trading algorithm LIVE
+#-------------------------------------------------------------------------------
+
 run_trade_algo(par=par_best, live=TRUE)
+
+
+
