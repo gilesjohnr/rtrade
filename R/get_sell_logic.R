@@ -1,7 +1,7 @@
 get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL) {
 
 
-  logic_sell <- d$supertrend_2[t-1] <= d$mid[t-1] & d$supertrend_2[t] > d$mid[t]
+  logic_sell <- d$supertrend_2_sell[t] == 1
 
   if (logic_sell) {
 
@@ -12,8 +12,17 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL) {
       message(":: Double-checking SELL trigger ::")
       Sys.sleep(param$double_check_wait)
 
-      tmp <- compile_data(param)
-      logic_sell <- tmp$supertrend_2[t-1] <= tmp$mid[t-1] & tmp$supertrend_2[t] > tmp$mid[t]
+      tmp <- get_klines(symbol = param$symbol,
+                        interval = param$interval_short,
+                        limit = 100,
+                        verbose = FALSE)
+
+      tmp <- cbind(tmp, clean_dates(tmp$time_open))
+
+      st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=param$n_supertrend_2, f=param$f_supertrend_2)
+      tmp$supertrend_2_sell <- st$sell
+
+      logic_sell <- tmp$supertrend_2_sell[which.max(tmp$date_time)] == 1
 
       message(ifelse(logic_sell, 'Positive', 'False-positive'))
 

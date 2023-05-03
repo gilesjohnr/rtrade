@@ -33,7 +33,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       # Get current data
       #-------------------------------------------------------------------------
 
-      d <- compile_data(param)
+      d <- compile_data(param=param)
       t <- which.max(d$date_time)
       current_price <- d$close[t]
 

@@ -63,7 +63,7 @@ param_default <- list(
 )
 
 
-n <- 10 # number of LHS replicates
+n <- 1000 # number of LHS replicates
 min_win_prob <- 0.5 # Minimum win probability
 
 Y <- randomLHS(n, 12)
@@ -157,7 +157,7 @@ param_best <- map_lhs_to_param(Y, param=param_default, i=out_best$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param=param_default, i=4255) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=613) # Manual override
 
 }
 

@@ -4,8 +4,7 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
 
   if (!is.na(d$supertrend_1[t])) {
 
-    #logic_buy <- d$supertrend_1_buy[t] == 1
-    logic_buy <- d$supertrend_1[t-1] >= d$mid[t-1] & d$supertrend_1[t] < d$mid[t] #| d$supertrend_2[t-1] >= d$mid[t-1] & d$supertrend_2[t] < d$mid[t]
+    logic_buy <- d$supertrend_1_buy[t] == 1
 
     if (logic_buy) {
 
@@ -17,17 +16,17 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
         Sys.sleep(param$double_check_wait)
 
         # Get hourly (or other small-scale time interval)
-        tmp <- get_klines(symbol=param$symbol,
+        tmp <- get_klines(symbol = param$symbol,
                           interval = param$interval_short,
-                          limit = param$limit,
+                          limit = 100,
                           verbose = FALSE)
 
         tmp <- cbind(tmp, clean_dates(tmp$time_open))
 
-        st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=param$n_supertrend_short, f=param$f_supertrend_short_buy)
+        st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=param$n_supertrend_1, f=param$f_supertrend_1)
         tmp$supertrend_1_buy <- st$buy
 
-        logic_buy <- tmp$supertrend_1_buy[t] == 1
+        logic_buy <- tmp$supertrend_1_buy[which.max(tmp$date_time)] == 1
         message(ifelse(logic_buy, 'Positive', 'False-positive'))
 
       }
@@ -57,7 +56,7 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
     Y <- d$ema_short_slope[t] <= param$slope_threshold_short_buy
     if (Y) {
       message(":: HOLD BUY (short term downtrend) ::")
-      logic_buy <- logic_buy & !Y
+      logic_buy <- !Y
     }
 
   }
@@ -69,7 +68,7 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
     Y <- d$ema_long_slope[t] <= param$slope_threshold_long_buy
     if (Y) {
       message(":: HOLD BUY (long term downtrend) ::")
-      logic_buy <- logic_buy & !Y
+      logic_buy <- !Y
     }
 
   }
