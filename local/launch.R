@@ -25,71 +25,85 @@ data("handle")
 # Define default parameters
 #-------------------------------------------------------------------------------
 
-param <- list(
+param_default <- list(
 
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
-  limit = pmin(1000, 12*12),
+  limit = pmin(1000, 12*24),
 
-  slope_threshold_buy = -1, # below this, do not buy
-  slope_threshold_sell = 2, # above this, do not sell
-  risk_ratio = 2, # Only on when in sideways trend (consolidating)
-
-  sleep_bt_runs = 10,
+  sleep_bt_runs = 3,
   sleep_bt_orders = 30,
 
-  n_supertrend_short = 10,
-  f_supertrend_short_buy = 1,
-  f_supertrend_short_sell = 1.1,
-  n_atr = 10,
-  f_atr = 1.05, # factor to multiple ATR by when determining sell stop
-  n_ema_1 = 20, # For buy triggers
-  n_ema_2 = 10, # For sell triggers
+  n_supertrend_1 = 10,    # Supertrend for BUY signals
+  f_supertrend_1 = 0.75,
+  n_supertrend_2 = 10,    # Supertrend for SELL signals
+  f_supertrend_2 = 0.5,
 
-  manual_sell_triggers = FALSE,
-  manual_sell_trigger_low = -0.0025,
-  manual_sell_trigger_high = 0.005,
+  n_atr = 12,
+  f_atr = 1.5, # factor to multiple ATR by when determining sell stop
 
-  time_window = 4000,
-  wait_and_see = TRUE, # wait until time step is a portion complete before acting
+  n_ema_short = 10, # Short-term Exponential Moving Average
+  n_ema_long = 45, # Long-term Exponential Moving Average
+
+  slope_threshold_short_buy = -1, # below this, do not buy
+  slope_threshold_short_sell = 2, # above this, do not sell
+  slope_threshold_long_buy = -1, # below this, do not buy
+  slope_threshold_long_sell = 2, # above this, do not sell
+
+  n_bbands = 20,    # Number of time steps to use in Bollinger bands
+  sd_bbands = 2, # Number of standard deviations in Bollinger bands
+
+  time_window = 4000,        # Window of time orders are good for on the server (milliseconds)
+  wait_and_see = FALSE,      # wait until time step is a portion complete before acting
   wait_and_see_prop = 1/5,
-  double_check = TRUE
+  double_check = TRUE,       # when short buy/sell triggered, wait X seconds then double check the logic
+  double_check_wait = 10     # in seconds
 
 )
 
-n <- 1000 # number of LHS replicates
+
+n <- 10 # number of LHS replicates
 min_win_prob <- 0.5 # Minimum win probability
 
+Y <- randomLHS(n, 12)
 
+Y[,1] <- qunif(Y[,1], 5, 25)    # n_supertrend_1
+Y[,2] <- qunif(Y[,2], 0.5, 3)   # f_supertrend_1
+Y[,3] <- qunif(Y[,3], 5, 25)    # n_supertrend_2
+Y[,4] <- qunif(Y[,4], 0.25, 2)  # f_supertrend_2
 
-Y <- randomLHS(n, 10)
-Y[,1] <- qunif(Y[,1], -10, 0)  # slope_threshold_buy
-Y[,2] <- qunif(Y[,2], 0, 10)   # slope_threshold_sell
-Y[,3] <- qunif(Y[,3], 1, 20)   # risk_ratio
-Y[,4] <- qunif(Y[,4], 6, 30)   # n_supertrend_short
-Y[,5] <- qunif(Y[,5], 0.5, 3)   # f_supertrend_short_buy
-Y[,6] <- qunif(Y[,6], 0.5, 3)   # f_supertrend_short_sell
-Y[,7] <- qunif(Y[,7], 3, 24)   # n_atr
-Y[,8] <- qunif(Y[,8], 1, 2)   # f_atr
-Y[,9] <- qunif(Y[,9], 6, 24)   # n_ema_1
-Y[,10] <- qunif(Y[,10], 6, 24)   # n_ema_2
+Y[,5] <- qunif(Y[,5], 7, 25)      # n_ema_short
+Y[,6] <- qunif(Y[,6], 25, 99)    # n_ema_long
+
+Y[,7] <- qunif(Y[,7], -20, 0)   # slope_threshold_short_buy
+Y[,8] <- qunif(Y[,8], 0, 20)    # slope_threshold_short_sell
+Y[,9] <- qunif(Y[,9], -10, 0)   # slope_threshold_long_buy
+Y[,10] <- qunif(Y[,10], 0, 10)  # slope_threshold_long_sell
+
+Y[,11] <- qunif(Y[,11], 10, 30)    # n_bbands
+Y[,12] <- qunif(Y[,12], 1, 3)    # sd_bbands
 
 
 map_lhs_to_param <- function(Y, param, i) {
 
-  tmp_param <- param
-  tmp_param$slope_threshold_buy <- Y[i,1]
-  tmp_param$slope_threshold_sell <- Y[i,2]
-  tmp_param$risk_ratio <- Y[i,3]
-  tmp_param$n_supertrend_short <- Y[i,4]
-  tmp_param$f_supertrend_short_buy <- Y[i,5]
-  tmp_param$f_supertrend_short_sell <- Y[i,6]
-  tmp_param$n_atr <- Y[i,7]
-  tmp_param$f_atr <- Y[i,8]
-  tmp_param$n_ema_1 <- Y[i,9]
-  tmp_param$n_ema_2 <- Y[i,10]
-  return(tmp_param)
+  param$n_supertrend_1 <- Y[i,1]
+  param$f_supertrend_1 <- Y[i,2]
+  param$n_supertrend_2 <- Y[i,3]
+  param$f_supertrend_2 <- Y[i,4]
+
+  param$n_ema_short <- Y[i,5]
+  param$n_ema_long <- Y[i,6]
+
+  param$slope_threshold_short_buy <- Y[i,7]
+  param$slope_threshold_short_sell <- Y[i,8]
+  param$slope_threshold_long_buy <- Y[i,9]
+  param$slope_threshold_long_sell <- Y[i,10]
+
+  param$n_bbands <- Y[i,11]
+  param$sd_bbands <- Y[i,12]
+
+  return(param)
 
 }
 
@@ -105,7 +119,7 @@ t_start <- proc.time()
 for (i in 1:n) {
 
   message(i)
-  tmp_param <- map_lhs_to_param(Y, param, i)
+  tmp_param <- map_lhs_to_param(Y, param=param_default, i)
 
   tmp <- run_trade_algo(param=tmp_param, live=FALSE)
 
@@ -139,33 +153,41 @@ out_best[1:10,]
 
 
 
-param_best <- map_lhs_to_param(Y, param, i=out_best$i[1])
+param_best <- map_lhs_to_param(Y, param=param_default, i=out_best$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param, i=4255) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=4255) # Manual override
 
 }
 
 best <- run_trade_algo(param=param_best, live=FALSE)
 
 
-
 #-------------------------------------------------------------------------------
 # Plot
 #-------------------------------------------------------------------------------
 
-msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$percent_change/best$n_trades, 2)}% per trade)
-            Actual = {round( best$data$close[nrow(best$data)]/best$data$close[1] - 1,3)}")
+#d <- compile_data(param=param_best)
 
 d <- best$data
 trades <- best$trades
 
+msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$percent_change/best$n_trades, 2)}% per trade)
+            Actual = {round( d$close[nrow(d)]/d$close[1] - 1,3)*100}%")
+
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
 par(mfrow=c(3,1), xpd=F)
 
-plot(d$date_time, d$supertrend_1, type='l', col='blue2', ylim=range(c(d$supertrend_1, d$mean), na.rm=T), main=param$symbol)
-lines(d$date_time, d$close)
+plot(d$date_time, d$close, type='l', main=param_default$symbol)
+lines(d$date_time, d$bb_avg, lwd=0.75, col='darkorange')
+lines(d$date_time, d$bb_hi, lwd=0.5, col='goldenrod')
+lines(d$date_time, d$bb_lo, lwd=0.5, col='goldenrod')
+lines(d$date_time, d$supertrend_1, col='green3')
+lines(d$date_time, d$supertrend_2, col='red3')
+lines(d$date_time, d$ema_short, col='cyan3')
+lines(d$date_time, d$ema_long, col='darkblue')
+
 abline(v=trades$date_time[trades$action == 'buy'], col='green3')
 abline(v=trades$date_time[trades$action == 'sell'], col='red3')
 

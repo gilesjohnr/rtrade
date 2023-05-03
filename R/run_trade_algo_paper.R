@@ -5,14 +5,14 @@ run_trade_algo_paper <- function(param) {
   # Get current data
   #-------------------------------------------------------------------------
 
-  d <- compile_data(param)
-
-  t <- which.max(d$date_time)
-
+  d <- compile_data(param=param)
   d <- d[min(which(!is.na(d$supertrend_1))):nrow(d),]
   d <- d[min(which(!is.na(d$supertrend_2))):nrow(d),]
-  d <- d[min(which(!is.na(d$EMA_1_slope))):nrow(d),]
-  d <- d[min(which(!is.na(d$EMA_2_slope))):nrow(d),]
+  d <- d[min(which(!is.na(d$ema_short_slope))):nrow(d),]
+  d <- d[min(which(!is.na(d$ema_long_slope))):nrow(d),]
+  t <- which.max(d$date_time)
+
+
 
 
   #-------------------------------------------------------------------------

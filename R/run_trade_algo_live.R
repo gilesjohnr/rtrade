@@ -250,11 +250,11 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       }
 
 
-      tmp <- get_all_orders(symbol = param$symbol)
-      tmp <- tmp[tmp$status %in% c('FILLED', 'paramTIALLY FILLED'),]
-
-
       if (display) {
+
+
+        tmp <- get_all_orders(symbol = param$symbol)
+        tmp <- tmp[tmp$status %in% c('FILLED', 'PARTIALLY FILLED'),]
 
 
         if ("RStudioGD" %in% names(dev.list())) dev.off(dev.list()["RStudioGD"])
@@ -262,8 +262,11 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
         plot_candles(tail(d, n=12*12),
                      main=glue("{param$symbol} | {d$date_time[t]} | Local: {format(Sys.time(), '%H:%M:%S')}"))
-        lines(d$date_time, d$EMA_1, lwd=2)
-        lines(d$date_time, d$EMA_2, lwd=2, col='grey50')
+        lines(d$date_time, d$bb_avg, lwd=0.75, col='darkorange')
+        lines(d$date_time, d$bb_hi, lwd=0.5, col='goldenrod')
+        lines(d$date_time, d$bb_lo, lwd=0.5, col='goldenrod')
+        lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
+        lines(d$date_time, d$ema_long, lwd=2, col='darkblue')
         lines(d$date_time, d$supertrend_1, type='l', lwd=1.5, col='pink')
         lines(d$date_time, d$supertrend_2, type='l', lwd=1.5, col='purple3')
 
