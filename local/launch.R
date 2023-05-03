@@ -55,31 +55,31 @@ param_default <- list(
   sd_bbands = 2, # Number of standard deviations in Bollinger bands
 
   time_window = 4000,        # Window of time orders are good for on the server (milliseconds)
-  wait_and_see = FALSE,      # wait until time step is a portion complete before acting
+  wait_and_see = TRUE,      # wait until time step is a portion complete before acting
   wait_and_see_prop = 1/5,
   double_check = TRUE,       # when short buy/sell triggered, wait X seconds then double check the logic
-  double_check_wait = 10     # in seconds
+  double_check_wait = 30     # in seconds
 
 )
 
 
-n <- 1000 # number of LHS replicates
+n <- 5000 # number of LHS replicates
 min_win_prob <- 0.5 # Minimum win probability
 
 Y <- randomLHS(n, 12)
 
 Y[,1] <- qunif(Y[,1], 5, 25)    # n_supertrend_1
-Y[,2] <- qunif(Y[,2], 0.5, 3)   # f_supertrend_1
+Y[,2] <- qunif(Y[,2], 0.25, 3)   # f_supertrend_1
 Y[,3] <- qunif(Y[,3], 5, 25)    # n_supertrend_2
-Y[,4] <- qunif(Y[,4], 0.25, 2)  # f_supertrend_2
+Y[,4] <- qunif(Y[,4], 0.25, 3)  # f_supertrend_2
 
 Y[,5] <- qunif(Y[,5], 7, 25)      # n_ema_short
 Y[,6] <- qunif(Y[,6], 25, 99)    # n_ema_long
 
 Y[,7] <- qunif(Y[,7], -20, 0)   # slope_threshold_short_buy
 Y[,8] <- qunif(Y[,8], 0, 20)    # slope_threshold_short_sell
-Y[,9] <- qunif(Y[,9], -10, 0)   # slope_threshold_long_buy
-Y[,10] <- qunif(Y[,10], 0, 10)  # slope_threshold_long_sell
+Y[,9] <- qunif(Y[,9], -20, 0)   # slope_threshold_long_buy
+Y[,10] <- qunif(Y[,10], 0, 20)  # slope_threshold_long_sell
 
 Y[,11] <- qunif(Y[,11], 10, 30)    # n_bbands
 Y[,12] <- qunif(Y[,12], 1, 3)    # sd_bbands
@@ -157,7 +157,7 @@ param_best <- map_lhs_to_param(Y, param=param_default, i=out_best$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param=param_default, i=613) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=4757) # Manual override
 
 }
 
@@ -168,7 +168,6 @@ best <- run_trade_algo(param=param_best, live=FALSE)
 # Plot
 #-------------------------------------------------------------------------------
 
-#d <- compile_data(param=param_best)
 
 d <- best$data
 trades <- best$trades

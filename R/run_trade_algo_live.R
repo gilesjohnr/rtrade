@@ -72,8 +72,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
             # TRY 1
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-            #bid <- get_order_depth(param$symbol)$bid_price[1]
-            bid <- d$mid[t]
+            bid <- get_order_depth(param$symbol)$bid_price[1]
 
             buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
@@ -95,8 +94,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
               bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
 
               tmp <- get_order_depth(param$symbol)
-              #bid <- tmp$bid_price[1] + ((tmp$bid_price[1] - tmp$bid_price[2])*0.25)
-              bid <- get_order_depth(param$symbol)$bid_price[1]
+              bid <- tmp$bid_price[1] + ((tmp$bid_price[1] - tmp$bid_price[2])*0.1)
 
               buy_order <- create_order(symbol = param$symbol,
                                         side = 'BUY',
@@ -170,8 +168,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
           tryCatch({
 
             # TRY 1
-            #ask <- get_order_depth(param$symbol)$ask_price[1]
-            ask <- d$mid[t]
+            ask <- get_order_depth(param$symbol)$ask_price[1]
 
             sell_order <- create_order(symbol = param$symbol,
                                        side = 'SELL',
@@ -190,9 +187,8 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
               cancel_order(param$symbol, sell_order$orderId); Sys.sleep(2)
               bal <- get_account_balance()
-              #tmp <- get_order_depth(param$symbol)
-              #ask <- tmp$ask_price[1] - ((tmp$ask_price[2] - tmp$ask_price[1])*0.25)
-              ask <- get_order_depth(param$symbol)$ask_price[1]
+              tmp <- get_order_depth(param$symbol)
+              ask <- tmp$ask_price[1] - ((tmp$ask_price[2] - tmp$ask_price[1])*0.1)
 
               sell_order <- create_order(symbol = param$symbol,
                                          side = 'SELL',
