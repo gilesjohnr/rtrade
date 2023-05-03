@@ -13,16 +13,7 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL) {
       Sys.sleep(param$double_check_wait)
 
       tmp <- compile_data(param)
-
-      if (tmp$supertrend_2_sell[t] < tmp$mid[t]) {
-
-        logic_sell <- tmp$supertrend_2[t-1] <= tmp$mid[t-1] & tmp$supertrend_2[t] > tmp$mid[t]
-
-      } else {
-
-        logic_sell <- tmp$supertrend_1[t-1] <= tmp$mid[t-1] & tmp$supertrend_1[t] > tmp$mid[t]
-
-      }
+      logic_sell <- tmp$supertrend_2[t-1] <= tmp$mid[t-1] & tmp$supertrend_2[t] > tmp$mid[t]
 
       message(ifelse(logic_sell, 'Positive', 'False-positive'))
 
