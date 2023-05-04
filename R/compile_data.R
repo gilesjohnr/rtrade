@@ -35,6 +35,9 @@ compile_data <- function(param) {
   d$bb_hi <- bb$up
   d$bb_lo <- bb$dn
 
+  for (i in 2:nrow(d)) d$bb_slope[i] <- d$bb_avg[i] - d$bb_avg[i-1]
+
+
   return(d)
 
 }
