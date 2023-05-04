@@ -1,4 +1,4 @@
-run_trade_algo_paper <- function(param) {
+run_trade_algo_paper <- function(param, verbose=TRUE) {
 
 
   #-------------------------------------------------------------------------
@@ -28,7 +28,7 @@ run_trade_algo_paper <- function(param) {
     if (is.na(state) | state == 'sell') {
 
 
-      logic_buy <- get_buy_logic(d, t=i, param)
+      logic_buy <- get_buy_logic(d=d, t=i, param=param, verbose=verbose)
 
 
       if (logic_buy) {
@@ -53,7 +53,7 @@ run_trade_algo_paper <- function(param) {
     } else if (state == 'buy') {
 
 
-      logic_sell <- get_sell_logic(d, t=i, param, live=FALSE, trades=trades)
+      logic_sell <- get_sell_logic(d=d, t=i, param=param, live=FALSE, trades=trades, verbose=verbose)
 
 
       if (logic_sell) {

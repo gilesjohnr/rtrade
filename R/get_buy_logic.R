@@ -1,4 +1,4 @@
-get_buy_logic <- function(d, t, param, live=FALSE) {
+get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
 
   logic_buy <- FALSE
 
@@ -8,43 +8,20 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
 
     if (logic_buy) {
 
-      message(":: Logic BUY (short buy) ::")
+      if (verbose) message(":: Logic BUY (short buy) ::")
 
       if (live & param$double_check) {
 
-        message(":: Double-checking BUY trigger ::")
+        if (verbose) message(":: Double-checking BUY trigger ::")
         Sys.sleep(param$double_check_wait)
 
-        # Get hourly (or other small-scale time interval)
-        tmp <- get_klines(symbol = param$symbol,
-                          interval = param$interval_short,
-                          limit = 100,
-                          verbose = FALSE)
+        d <- compile_data(param=param)
+        logic_buy <- d$supertrend_1_buy[which.max(d$time_close)]
 
-        tmp <- cbind(tmp, clean_dates(tmp$time_open))
-
-        st <- calc_supertrend(HLC=tmp[,c("high","low","close")], n=param$n_supertrend_1, f=param$f_supertrend_1)
-        tmp$supertrend_1_buy <- st$buy
-
-        logic_buy <- tmp$supertrend_1_buy[which.max(tmp$date_time)] == 1
-        message(ifelse(logic_buy, 'Positive', 'False-positive'))
+        if (verbose) message(ifelse(logic_buy, 'Positive', 'False-positive'))
 
       }
 
-    }
-
-  }
-
-
-
-  # BUY IF short-term buy directly preceded long-term uptrend shift
-  if (!is.na(d$ema_short_slope[t-1])) {
-
-    Y <- d$ema_short_slope[t] >= param$slope_threshold_short_buy & d$ema_short_slope[t-1] < param$slope_threshold_short_buy & any(d$supertrend_1_buy[(t-2):t] == 1)
-
-    if (Y) {
-      logic_buy <- Y
-      message(":: Logic BUY (short buy just before trend change) ::")
     }
 
   }
@@ -55,34 +32,37 @@ get_buy_logic <- function(d, t, param, live=FALSE) {
 
     Y <- d$ema_short_slope[t] <= param$slope_threshold_short_buy
     if (Y) {
-      message(":: HOLD BUY (short term downtrend) ::")
+      if (verbose) message(":: HOLD BUY (short term downtrend) ::")
       logic_buy <- !Y
     }
 
   }
 
 
-  # Only allow BUY if not in long-term downward trend
-  if (!is.na(d$ema_long_slope[t])) {
+  # BUY IF short-term buy directly preceded long-term uptrend shift
+  if (!is.na(d$ema_short_slope[t-1])) {
 
-    Y <- d$ema_long_slope[t] <= param$slope_threshold_long_buy
+    Y <- d$ema_short_slope[t] >= param$slope_threshold_short_buy & d$ema_short_slope[t-1] < param$slope_threshold_short_buy & any(d$supertrend_1_buy[(t-2):t] == 1)
+
     if (Y) {
-      message(":: HOLD BUY (long term downtrend) ::")
-      logic_buy <- !Y
-    }
-
-  }
-
-  # IF ema_short crosses ABOVE ema_long trigger BUY
-  if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
-
-    Y <- d$ema_short[t-1] <= d$ema_long[t-1] & d$ema_short[t] > d$ema_long[t]
-    if (Y) {
-      message(":: Logic BUY (EMA cross) ::")
       logic_buy <- Y
+      if (verbose) message(":: Logic BUY (short buy just before trend change) ::")
     }
 
   }
+
+  # ONLY BUY IF price < bband mean
+  #if (!is.na(d$bb_avg[t])) {
+#
+  #  Y <- d$mid[t] > d$bb_avg[t]
+#
+  #  if (Y) {
+  #    logic_buy <- !Y
+  #    if (verbose) message(":: HOLD BUY (price above Bollinger mean) ::")
+  #  }
+#
+  #}
+
 
 
   return(logic_buy)
