@@ -6,9 +6,13 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
     # SIDEWAYS TREND
     if (verbose) message(":: Sideways trend ::")
-    logic_sell <- d$mid[t] > d$bb_hi[t]
-    if (logic_sell & verbose) message(":: Logic SELL (bband mode) ::")
 
+    if (!is.na(d$bb_peak_seq_1[t])) {
+
+      logic_sell <- d$bb_peak_seq_1[t] >= param$seq_bbands_1
+      if (logic_sell & verbose) message(":: Logic SELL (bband sideways peak) ::")
+
+    }
 
   } else {
 
@@ -35,20 +39,6 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
     }
 
 
-
-    # BBDANDS high sell
-    #if (!is.na(d$bb_hi[t])) {
-    #
-    #  Y <- d$mid[t] > d$bb_hi[t]
-    #  if (Y) {
-    #    if (verbose) message(":: Logic SELL (High Bollinger band breached) ::")
-    #    logic_sell <- Y
-    #  }
-    #
-    #}
-
-
-
     # HOLD IF there is a short term uptrend
     if (!is.na(d$ema_short[t])) {
 
@@ -59,6 +49,16 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
         if (verbose) message(glue(":: HOLD SELL (long term uptrend) ::"))
         logic_sell <- !Y
       }
+
+    }
+
+
+
+    # SELL IF there are sequential time steps that peak above bband 2
+    if (!is.na(d$bb_peak_seq_2[t])) {
+
+      logic_sell <- d$bb_peak_seq_2[t] >= param$seq_bbands_2
+      if (logic_sell & verbose) message(":: Logic SELL (bband uptrend peak) ::")
 
     }
 
@@ -77,6 +77,7 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
     }
 
   }
+
 
   # SELL IF price moves outside set risk ratio bounds
 
@@ -103,6 +104,9 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
     logic_sell <- Y
     if (verbose) message(glue(":: Logic SELL (gain = {round(gain, 4)}) ::"))
   }
+
+
+
 
 
   return(logic_sell)

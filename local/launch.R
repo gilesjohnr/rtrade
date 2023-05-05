@@ -49,12 +49,16 @@ param_default <- list(
 
   slope_threshold_short_buy = -1, # below this, do not buy
   slope_threshold_short_sell = 2, # above this, do not sell
-  slope_threshold_long_buy = -1, # below this, do not buy
-  slope_threshold_long_sell = 2, # above this, do not sell
+
   slope_threshold_bband_mode = 0.1,
 
-  n_bbands = 20,    # Number of time steps to use in Bollinger bands
-  sd_bbands = 2, # Number of standard deviations in Bollinger bands
+  n_bbands_1 = 20,    # Number of time steps to use in Bollinger bands
+  sd_bbands_1 = 2, # Number of standard deviations in Bollinger bands
+  seq_bbands_1 = 2,
+
+  n_bbands_2 = 20,    # Number of time steps to use in Bollinger bands
+  sd_bbands_2 = 2, # Number of standard deviations in Bollinger bands
+  seq_bbands_2= 3,
 
   time_window = 4000,        # Window of time orders are good for on the server (milliseconds)
   wait_and_see = TRUE,      # wait until time step is a portion complete before acting
@@ -68,7 +72,7 @@ param_default <- list(
 n <- 1000 # number of LHS replicates
 min_win_prob <- 0.5 # Minimum win probability
 
-Y <- randomLHS(n, 16)
+Y <- randomLHS(n, 18)
 
 Y[,1] <- qunif(Y[,1], 5, 25)     # n_supertrend_1
 Y[,2] <- qunif(Y[,2], 0.75, 3)   # f_supertrend_1
@@ -79,18 +83,21 @@ Y[,5] <- qunif(Y[,5], 6, 25)     # n_ema_short
 Y[,6] <- qunif(Y[,6], 25, 75)    # n_ema_long
 
 Y[,7] <- qunif(Y[,7], -20, -0.25)   # slope_threshold_short_buy
-Y[,8] <- qunif(Y[,8], 0.25, 20)    # slope_threshold_short_sell
-Y[,9] <- qunif(Y[,9], -20, 0)   # slope_threshold_long_buy
-Y[,10] <- qunif(Y[,10], 0, 20)  # slope_threshold_long_sell
+Y[,8] <- qunif(Y[,8], 0.25, 20)     # slope_threshold_short_sell
 
-Y[,11] <- qunif(Y[,11], 10, 30)     # n_bbands
-Y[,12] <- qunif(Y[,12], 0.5, 2.5)    # sd_bbands
+Y[,9] <- qunif(Y[,9], 10, 30)        # n_bbands_1
+Y[,10] <- qunif(Y[,10], 0.5, 1.5)    # sd_bbands_1
+Y[,11] <- qunif(Y[,11], 1, 2)        # seq_bbands_1
 
-Y[,13] <- qunif(Y[,13], 6, 25)    # n_atr
-Y[,14] <- qunif(Y[,14], 1, 3)     # f_atr
-Y[,15] <- qunif(Y[,15], 1, 20)    # risk_ratio
+Y[,12] <- qunif(Y[,12], 10, 30)      # n_bbands_2
+Y[,13] <- qunif(Y[,13], 1.75, 3)  # sd_bbands_2
+Y[,14] <- qunif(Y[,14], 3, 5)        # seq_bbands_2
 
-Y[,16] <- qunif(Y[,16], 0.01, 0.75)    # slope_threshold_bband_mode
+Y[,15] <- qunif(Y[,15], 6, 25)    # n_atr
+Y[,16] <- qunif(Y[,16], 1, 3)     # f_atr
+Y[,17] <- qunif(Y[,17], 1, 20)    # risk_ratio
+
+Y[,18] <- qunif(Y[,18], 0.5, 5)    # slope_threshold_bband_mode
 
 
 map_lhs_to_param <- function(Y, param, i) {
@@ -105,17 +112,20 @@ map_lhs_to_param <- function(Y, param, i) {
 
   param$slope_threshold_short_buy <- Y[i,7]
   param$slope_threshold_short_sell <- Y[i,8]
-  param$slope_threshold_long_buy <- Y[i,9]
-  param$slope_threshold_long_sell <- Y[i,10]
 
-  param$n_bbands <- Y[i,11]
-  param$sd_bbands <- Y[i,12]
+  param$n_bbands_1 <- Y[i,9]
+  param$sd_bbands_1 <- Y[i,10]
+  param$seq_bbands_1 <- Y[i,11]
 
-  param$n_atr <- Y[i,13]
-  param$f_atr <- Y[i,14]
-  param$risk_ratio <- Y[i,15]
+  param$n_bbands_2 <- Y[i,12]
+  param$sd_bbands_2 <- Y[i,13]
+  param$seq_bbands_2 <- Y[i,14]
 
-  param$slope_threshold_bband_mode <- Y[i,16]
+  param$n_atr <- Y[i,15]
+  param$f_atr <- Y[i,16]
+  param$risk_ratio <- Y[i,17]
+
+  param$slope_threshold_bband_mode <- Y[i,18]
 
   return(param)
 
@@ -179,6 +189,8 @@ if (FALSE) {
   param_best <- map_lhs_to_param(Y, param=param_default, i=186) # Manual override
 
 }
+
+#best <- run_trade_algo(param=param_default, live=FALSE)
 
 best <- run_trade_algo(param=param_best, live=FALSE)
 

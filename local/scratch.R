@@ -258,22 +258,12 @@ remotes::install_github("gilesjohnr/rbinanceus")
 
 
 
-
+d <- compile_data(param=param_default)
 
 d <- compile_data(param=param_best)
 
-d$peak <- as.integer(d$open > d$bb_hi | d$close > d$bb_hi)
-d$peak[is.na(d$peak)] <- 0
-d$peak_seq <- d$peak
-for (i in 2:nrow(d)) if (d$peak_seq[i] > 0) d$peak_seq[i] <- d$peak_seq[i] + d$peak_seq[i-1]
-
-d$dip <- as.integer(d$open < d$bb_lo | d$close < d$bb_lo)
-d$dip[is.na(d$dip)] <- 0
-d$dip_seq <- d$dip
-for (i in 2:nrow(d)) if (d$dip_seq[i] > 0) d$dip_seq[i] <- d$dip_seq[i] + d$dip_seq[i-1]
-
-hist(d$x)
-table(d$x)
+hist(d$peak_seq)
+table(d$peak_seq)
 
 par(mfrow=c(1,1), xpd=F)
 plot_candles(d)

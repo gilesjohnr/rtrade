@@ -6,9 +6,13 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
 
     # SIDEWAYS TREND
     if (verbose) message(":: Sideways trend ::")
-    logic_buy <- d$mid[t] < d$bb_lo[t]
-    if (logic_buy & verbose) message(":: Logic BUY (bband mode) ::")
 
+    if (!is.na(d$bb_dip_seq_1[t])) {
+
+      logic_buy <- d$bb_dip_seq_1[t] >= param$seq_bbands_1
+      if (logic_buy & verbose) message(":: Logic BUY (bband dip) ::")
+
+    }
 
   } else {
 

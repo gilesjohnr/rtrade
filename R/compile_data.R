@@ -32,22 +32,33 @@ compile_data <- function(param, limit=NULL) {
   for (i in (k+1):nrow(d)) d$ema_long[i] <- mean(d$ema_long[(i-k):i], na.rm=T)
   for (i in 2:nrow(d)) d$ema_long_slope[i] <- d$ema_long[i] - d$ema_long[i-1]
 
-  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands), sd=param$sd_bbands))
-  d$bb_avg <- bb$mavg
-  d$bb_hi <- bb$up
-  d$bb_lo <- bb$dn
 
-  for (i in 2:nrow(d)) d$bb_slope[i] <- d$bb_avg[i] - d$bb_avg[i-1]
+  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands_1), sd=param$sd_bbands_1))
+  d$bb_avg_1 <- bb$mavg
+  d$bb_hi_1 <- bb$up
+  d$bb_lo_1 <- bb$dn
 
-  d$peak <- as.integer(d$open > d$bb_hi | d$close > d$bb_hi)
-  d$peak[is.na(d$peak)] <- 0
-  d$peak_seq <- d$peak
-  for (i in 2:nrow(d)) if (d$peak_seq[i] > 0) d$peak_seq[i] <- d$peak_seq[i] + d$peak_seq[i-1]
+  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands_2), sd=param$sd_bbands_2))
+  d$bb_avg_2 <- bb$mavg
+  d$bb_hi_2 <- bb$up
+  d$bb_lo_2 <- bb$dn
 
-  d$dip <- as.integer(d$open < d$bb_lo | d$close < d$bb_lo)
-  d$dip[is.na(d$dip)] <- 0
-  d$dip_seq <- d$dip
-  for (i in 2:nrow(d)) if (d$dip_seq[i] > 0) d$dip_seq[i] <- d$dip_seq[i] + d$dip_seq[i-1]
+  #for (i in 2:nrow(d)) d$bb_slope[i] <- d$bb_avg[i] - d$bb_avg[i-1]
+
+  d$bb_peak_1 <- as.integer(d$open > d$bb_hi_1 | d$close > d$bb_hi_1)
+  d$bb_peak_1[is.na(d$bb_peak_1)] <- 0
+  d$bb_peak_seq_1 <- d$bb_peak_1
+  for (i in 2:nrow(d)) if (d$bb_peak_seq_1[i] > 0) d$bb_peak_seq_1[i] <- d$bb_peak_seq_1[i] + d$bb_peak_seq_1[i-1]
+
+  d$bb_dip_1 <- as.integer(d$open < d$bb_lo_1 | d$close < d$bb_lo_1)
+  d$bb_dip_1[is.na(d$bb_dip_1)] <- 0
+  d$bb_dip_seq_1 <- d$bb_dip_1
+  for (i in 2:nrow(d)) if (d$bb_dip_seq_1[i] > 0) d$bb_dip_seq_1[i] <- d$bb_dip_seq_1[i] + d$bb_dip_seq_1[i-1]
+
+  d$bb_peak_2 <- as.integer(d$open > d$bb_hi_2 | d$close > d$bb_hi_2)
+  d$bb_peak_2[is.na(d$bb_peak_2)] <- 0
+  d$bb_peak_seq_2 <- d$bb_peak_2
+  for (i in 2:nrow(d)) if (d$bb_peak_seq_2[i] > 0) d$bb_peak_seq_2[i] <- d$bb_peak_seq_2[i] + d$bb_peak_seq_2[i-1]
 
 
   return(d)
