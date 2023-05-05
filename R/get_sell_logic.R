@@ -2,7 +2,7 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
   logic_sell <- FALSE
 
-  if (!is.na(d$ema_short_slope[t]) & d$ema_short_slope[t] < param$slope_threshold_bband_mode & d$ema_short_slope[t] > -1*param$slope_threshold_bband_mode ) {
+  if (!is.na(d$ema_bband_mode_slope[t]) & d$ema_bband_mode_slope[t] < param$slope_threshold_bband_mode & d$ema_bband_mode_slope[t] > -1*param$slope_threshold_bband_mode ) {
 
     # SIDEWAYS TREND
     if (verbose) message(":: Sideways trend ::")
@@ -49,9 +49,9 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
 
     # HOLD IF there is a short term uptrend
-    if (!is.na(d$ema_short[t])) {
+    if (!is.na(d$ema_sell_hold_slope[t])) {
 
-      Y <- d$ema_sell_hold[t] > param$slope_threshold_sell_hold
+      Y <- d$ema_sell_hold_slope[t] > param$slope_threshold_sell_hold
 
       if (Y) {
 

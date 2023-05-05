@@ -6,12 +6,7 @@ run_trade_algo_paper <- function(param, verbose=TRUE) {
   #-------------------------------------------------------------------------
 
   d <- compile_data(param=param)
-  d <- d[min(which(!is.na(d$supertrend_1))):nrow(d),]
-  d <- d[min(which(!is.na(d$supertrend_2))):nrow(d),]
-  d <- d[min(which(!is.na(d$ema_short_slope))):nrow(d),]
-  d <- d[min(which(!is.na(d$ema_long_slope))):nrow(d),]
   t <- which.max(d$date_time)
-
 
 
 

@@ -40,19 +40,14 @@ param_default <- list(
   n_supertrend_2 = 10,    # Supertrend for SELL signals
   f_supertrend_2 = 1.05,
 
-  n_atr = 12,
-  f_atr = 1.5, # factor to multiple ATR by when determining sell stop
-  risk_ratio = 10,
-
   n_ema_short = 10, # Short-term Exponential Moving Average
   n_ema_long = 45, # Long-term Exponential Moving Average
-
   n_ema_buy_hold = 12,
   n_ema_sell_hold = 12,
+  n_ema_bband_mode = 15,
 
   slope_threshold_buy_hold = -4, # below this, do not buy
   slope_threshold_sell_hold = 6, # above this, do not sell
-
   slope_threshold_bband_mode = 4,
 
   n_bbands_1 = 20,    # Number of time steps to use in Bollinger bands
@@ -62,6 +57,10 @@ param_default <- list(
   n_bbands_2 = 20,    # Number of time steps to use in Bollinger bands
   sd_bbands_2 = 2, # Number of standard deviations in Bollinger bands
   seq_bbands_2= 3,
+
+  n_atr = 12,
+  f_atr = 1.5, # factor to multiple ATR by when determining sell stop
+  risk_ratio = 10,
 
   time_window = 4000,        # Window of time orders are good for on the server (milliseconds)
   wait_and_see = TRUE,      # wait until time step is a portion complete before acting
@@ -79,7 +78,7 @@ param_default <- list(
 
 t_start <- proc.time()
 
-n <- 2000 # number of LHS replicates
+n <- 1000 # number of LHS replicates
 Y <- geneticLHS(n=n, k=20, pop=50, gen=10, pMut=.25, verbose=T)
 
 Y[,1] <- qunif(Y[,1], 5, 25)     # n_supertrend_1
@@ -89,26 +88,26 @@ Y[,4] <- qunif(Y[,4], 0.75, 3)   # f_supertrend_2
 
 Y[,5] <- qunif(Y[,5], 6, 25)     # n_ema_short
 Y[,6] <- qunif(Y[,6], 25, 75)    # n_ema_long
-
 Y[,7] <- qunif(Y[,7], 6, 25)     # n_ema_buy_hold
 Y[,8] <- qunif(Y[,8], 6, 25)     # n_ema_sell_hold
+Y[,9] <- qunif(Y[,9], 6, 25)     # n_ema_bband_mode
 
-Y[,9] <- qunif(Y[,9], -20, -6)     # slope_threshold_buy_hold
-Y[,10] <- qunif(Y[,10], 6, 20)       # slope_threshold_sell_hold
+Y[,10] <- qunif(Y[,10], -20, -6)   # slope_threshold_buy_hold
+Y[,11] <- qunif(Y[,11], 6, 20)     # slope_threshold_sell_hold
+Y[,12] <- qunif(Y[,12], 0.5, 6)    # slope_threshold_bband_mode
 
-Y[,11] <- qunif(Y[,11], 10, 30)        # n_bbands_1
-Y[,12] <- qunif(Y[,12], 0.5, 1.5)    # sd_bbands_1
-Y[,13] <- qunif(Y[,13], 1, 2)        # seq_bbands_1
+Y[,13] <- qunif(Y[,13], 10, 30)      # n_bbands_1
+Y[,14] <- qunif(Y[,14], 0.5, 1.5)    # sd_bbands_1
+Y[,15] <- qunif(Y[,15], 1, 2)        # seq_bbands_1
 
-Y[,14] <- qunif(Y[,14], 10, 30)      # n_bbands_2
-Y[,15] <- qunif(Y[,15], 1.75, 3)  # sd_bbands_2
-Y[,16] <- qunif(Y[,16], 3, 5)        # seq_bbands_2
+Y[,16] <- qunif(Y[,16], 10, 30)      # n_bbands_2
+Y[,17] <- qunif(Y[,17], 1.75, 3)     # sd_bbands_2
+Y[,18] <- qunif(Y[,18], 3, 5)        # seq_bbands_2
 
-Y[,17] <- qunif(Y[,17], 6, 25)    # n_atr
-Y[,18] <- qunif(Y[,18], 1, 3)     # f_atr
-Y[,19] <- qunif(Y[,19], 1, 20)    # risk_ratio
+Y[,19] <- qunif(Y[,19], 6, 25)    # n_atr
+Y[,20] <- qunif(Y[,20], 1, 3)     # f_atr
+Y[,21] <- qunif(Y[,21], 1, 20)    # risk_ratio
 
-Y[,20] <- qunif(Y[,20], 0.5, 6)    # slope_threshold_bband_mode
 
 
 map_lhs_to_param <- function(Y, param, i) {
@@ -123,23 +122,23 @@ map_lhs_to_param <- function(Y, param, i) {
 
   param$n_ema_buy_hold <- Y[i,7]
   param$n_ema_sell_hold <- Y[i,8]
+  param$n_ema_bband_mode <- Y[i,9]
 
-  param$slope_threshold_buy_hold <- Y[i,9]
-  param$slope_threshold_sell_hold <- Y[i,10]
+  param$slope_threshold_buy_hold <- Y[i,10]
+  param$slope_threshold_sell_hold <- Y[i,11]
+  param$slope_threshold_bband_mode <- Y[i,12]
 
-  param$n_bbands_1 <- Y[i,11]
-  param$sd_bbands_1 <- Y[i,12]
-  param$seq_bbands_1 <- Y[i,13]
+  param$n_bbands_1 <- Y[i,13]
+  param$sd_bbands_1 <- Y[i,14]
+  param$seq_bbands_1 <- Y[i,15]
 
-  param$n_bbands_2 <- Y[i,14]
-  param$sd_bbands_2 <- Y[i,15]
-  param$seq_bbands_2 <- Y[i,16]
+  param$n_bbands_2 <- Y[i,16]
+  param$sd_bbands_2 <- Y[i,17]
+  param$seq_bbands_2 <- Y[i,18]
 
-  param$n_atr <- Y[i,17]
-  param$f_atr <- Y[i,18]
-  param$risk_ratio <- Y[i,19]
-
-  param$slope_threshold_bband_mode <- Y[i,20]
+  param$n_atr <- Y[i,19]
+  param$f_atr <- Y[i,20]
+  param$risk_ratio <- Y[i,21]
 
   return(param)
 
@@ -202,7 +201,7 @@ if (FALSE) {
 
 }
 
-#best <- run_trade_algo(param=param_default, live=FALSE)
+best <- run_trade_algo(param=param_default, live=FALSE)
 best <- run_trade_algo(param=param_best, live=FALSE)
 
 
