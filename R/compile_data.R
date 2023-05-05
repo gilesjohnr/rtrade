@@ -22,6 +22,7 @@ compile_data <- function(param, limit=NULL) {
 
   d$atr <- as.data.frame(ATR(d[,c("high","low","close")], n=param$n_atr))$atr
 
+
   d$ema_short <- EMA(d[,"mid"], n=param$n_ema_short) # Exponential Moving Average
   k <- 1
   for (i in (k+1):nrow(d)) d$ema_short[i] <- mean(d$ema_short[(i-k):i], na.rm=T)
@@ -31,6 +32,16 @@ compile_data <- function(param, limit=NULL) {
   k <- 1
   for (i in (k+1):nrow(d)) d$ema_long[i] <- mean(d$ema_long[(i-k):i], na.rm=T)
   for (i in 2:nrow(d)) d$ema_long_slope[i] <- d$ema_long[i] - d$ema_long[i-1]
+
+  d$ema_buy_hold <- EMA(d[,"mid"], n=param$n_ema_buy_hold) # Exponential Moving Average
+  k <- 1
+  for (i in (k+1):nrow(d)) d$ema_buy_hold[i] <- mean(d$ema_buy_hold[(i-k):i], na.rm=T)
+  for (i in 2:nrow(d)) d$ema_buy_hold_slope[i] <- d$ema_buy_hold[i] - d$ema_buy_hold[i-1]
+
+  d$ema_sell_hold <- EMA(d[,"mid"], n=param$n_ema_sell_hold) # Exponential Moving Average
+  k <- 1
+  for (i in (k+1):nrow(d)) d$ema_sell_hold[i] <- mean(d$ema_sell_hold[(i-k):i], na.rm=T)
+  for (i in 2:nrow(d)) d$ema_sell_hold_slope[i] <- d$ema_sell_hold[i] - d$ema_sell_hold[i-1]
 
 
   bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands_1), sd=param$sd_bbands_1))

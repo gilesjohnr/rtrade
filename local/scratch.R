@@ -276,3 +276,17 @@ abline(v=d$date_time[d$bb_slope > -x & d$bb_slope < x])
 
 
 
+
+
+n <- 100 # number of LHS replicates
+Y <- randomLHS(n, 20)
+A <- maximinLHS(n=n, k=20, method="build", dup=3)
+G <- geneticLHS(n=n, k=20, pop=100, gen=10, pMut=.25, verbose=T)
+plot(Y[,1], Y[,2])
+plot(A[,1], A[,2])
+plot(G[,1], G[,2])
+
+
+
+
+

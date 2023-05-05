@@ -10,7 +10,7 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
     if (!is.na(d$bb_dip_seq_1[t])) {
 
       logic_buy <- d$bb_dip_seq_1[t] >= param$seq_bbands_1
-      if (logic_buy & verbose) message(":: Logic BUY (bband dip) ::")
+      if (logic_buy & verbose) message(":: Logic BUY (bband sideways dip) ::")
 
     }
 
@@ -46,7 +46,7 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
     # Only allow BUY if not in short-term downward trend
     if (!is.na(d$ema_short_slope[t])) {
 
-      Y <- d$ema_short_slope[t] <= param$slope_threshold_short_buy
+      Y <- d$ema_buy_hold[t] <= param$slope_threshold_buy_hold
       if (Y) {
         if (verbose) message(":: HOLD BUY (short term downtrend) ::")
         logic_buy <- !Y
@@ -58,7 +58,7 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
     # BUY IF short-term buy directly preceded long-term uptrend shift
     if (!is.na(d$ema_short_slope[t-1])) {
 
-      Y <- d$ema_short_slope[t] >= param$slope_threshold_short_buy & d$ema_short_slope[t-1] < param$slope_threshold_short_buy & any(d$supertrend_1_buy[(t-2):t] == 1)
+      Y <- d$ema_buy_hold[t] >= param$slope_threshold_buy_hold & d$ema_buy_hold[t-1] < param$slope_threshold_buy_hold & any(d$supertrend_1_buy[(t-2):t] == 1)
 
       if (Y) {
         logic_buy <- Y
