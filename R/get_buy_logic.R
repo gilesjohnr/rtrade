@@ -2,12 +2,12 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
 
   logic_buy <- FALSE
 
-  if (!is.na(d$bb_slope[t]) & d$ema_short_slope[t] < abs(param$slope_threshold_bband_mode) & d$ema_short_slope[t] > -1*abs(param$slope_threshold_bband_mode) ) {
+  if (!is.na(d$ema_short_slope[t]) & d$ema_short_slope[t] < param$slope_threshold_bband_mode & d$ema_short_slope[t] > -1*param$slope_threshold_bband_mode ) {
 
     # SIDEWAYS TREND
-
+    if (verbose) message(":: Sideways trend ::")
     logic_buy <- d$mid[t] < d$bb_lo[t]
-    if (logic_buy & verbose) message(":: Logic BUY (bbdand mode) ::")
+    if (logic_buy & verbose) message(":: Logic BUY (bband mode) ::")
 
 
   } else {
@@ -61,6 +61,21 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
         if (verbose) message(":: Logic BUY (short buy just before trend change) ::")
       }
 
+    }
+
+
+  }
+
+
+
+  # IF ema_short crosses ABOVE ema_long trigger BUY
+  if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
+
+    Y <- d$ema_short[t-1] <= d$ema_long[t-1] & d$ema_short[t] > d$ema_long[t]
+
+    if (Y) {
+      if (verbose) message(":: Logic BUY (EMA cross) ::")
+      logic_buy <- Y
     }
 
   }

@@ -90,7 +90,7 @@ Y[,13] <- qunif(Y[,13], 6, 25)    # n_atr
 Y[,14] <- qunif(Y[,14], 1, 3)     # f_atr
 Y[,15] <- qunif(Y[,15], 1, 20)    # risk_ratio
 
-Y[,16] <- qunif(Y[,16], 0, 0.75)    # slope_threshold_bband_mode
+Y[,16] <- qunif(Y[,16], 0.01, 0.75)    # slope_threshold_bband_mode
 
 
 map_lhs_to_param <- function(Y, param, i) {
@@ -157,13 +157,17 @@ message(paste('Runtime:', round(as.numeric(t_stop["elapsed"])/60, 2), 'minutes')
 
 out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
 out$percent_change <- round(out$percent_change, 1)
-out$per_trade <- out$percent_change/out$n_trades
+out$per_trade <- round(out$percent_change/out$n_trades, 1)
 sel <- out$win_prob > min_win_prob
 if (!any(sel)) stop('No runs with win probability above threshold')
 
 out_best <- out[out$win_prob > min_win_prob,]
 out_best <- out_best[out_best$n_trades > 1,]
-out_best <- out_best[rev(rank(order(out_best$percent_change, out_best$win_prob), ties.method='first')),]
+out_best <- out_best[rev(rank(order(out_best$percent_change, out_best$per_trade), ties.method='first')),]
+
+ranks <- sapply(out_best[,c('percent_change', 'n_trades', 'per_trade', 'win_prob')], rank, ties.method='average')
+out_best$score <- rowMeans(ranks)
+out_best <- out_best[order(out_best$score, decreasing=TRUE),]
 out_best[1:10,]
 
 
@@ -226,13 +230,13 @@ par(mfrow=c(1,1))
 # Cache best fit parameters
 #-------------------------------------------------------------------------------
 
-path_cached_params <- file.path(getwd(), 'output', 'param_best.rds')
-saveRDS(param_best, path_cached_params)
+
+saveRDS(param_best, file.path(getwd(), 'output', 'param_best.rds'))
 
 
 if (FALSE) {
 
-  param_best <- readRDS(path_cached_params)
+  param_best <- readRDS(file.path(getwd(), 'output', 'param_best.rds'))
 
 }
 

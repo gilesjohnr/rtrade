@@ -256,3 +256,33 @@ credentials::set_github_pat()
 #now remotes::install_github() will work
 remotes::install_github("gilesjohnr/rbinanceus")
 
+
+
+
+
+d <- compile_data(param=param_best)
+
+d$peak <- as.integer(d$open > d$bb_hi | d$close > d$bb_hi)
+d$peak[is.na(d$peak)] <- 0
+d$peak_seq <- d$peak
+for (i in 2:nrow(d)) if (d$peak_seq[i] > 0) d$peak_seq[i] <- d$peak_seq[i] + d$peak_seq[i-1]
+
+d$dip <- as.integer(d$open < d$bb_lo | d$close < d$bb_lo)
+d$dip[is.na(d$dip)] <- 0
+d$dip_seq <- d$dip
+for (i in 2:nrow(d)) if (d$dip_seq[i] > 0) d$dip_seq[i] <- d$dip_seq[i] + d$dip_seq[i-1]
+
+hist(d$x)
+table(d$x)
+
+par(mfrow=c(1,1), xpd=F)
+plot_candles(d)
+lines(d$date_time, d$bb_avg, lwd=0.75, col='darkorange')
+lines(d$date_time, d$bb_hi, lwd=0.5, col='goldenrod')
+lines(d$date_time, d$bb_lo, lwd=0.5, col='goldenrod')
+
+x <- 5
+abline(v=d$date_time[d$bb_slope > -x & d$bb_slope < x])
+
+
+
