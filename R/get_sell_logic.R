@@ -17,7 +17,12 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
   } else {
 
 
-    logic_sell <- d$supertrend_2_sell[t]
+    if (d$supertrend_2_sell[t] < d$mid[t]) {
+      logic_sell <- d$supertrend_2_sell[t] == 1
+    } else {
+      logic_sell <- d$supertrend_1_sell[t] == 1
+    }
+
 
     if (logic_sell) {
 
@@ -29,7 +34,13 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
         Sys.sleep(param$double_check_wait)
 
         d <- compile_data(param=param)
-        logic_sell <- d$supertrend_2_sell[which.max(d$time_close)]
+        tt <- which.max(d$time_close)
+
+        if (d$supertrend_2_sell[tt] < d$mid[tt]) {
+          logic_sell <- d$supertrend_2_sell[tt] == 1
+        } else {
+          logic_sell <- d$supertrend_1_sell[tt] == 1
+        }
 
         if (verbose) message(ifelse(logic_sell, 'Positive', 'False-positive'))
 

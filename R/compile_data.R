@@ -24,14 +24,7 @@ compile_data <- function(param, limit=NULL) {
 
 
   d$ema_short <- EMA(d[,"mid"], n=param$n_ema_short) # Exponential Moving Average
-  #k <- 1
-  #for (i in (k+1):nrow(d)) d$ema_short[i] <- mean(d$ema_short[(i-k):i], na.rm=T)
-  #for (i in 2:nrow(d)) d$ema_short_slope[i] <- d$ema_short[i] - d$ema_short[i-1]
-
   d$ema_long <- EMA(d[,"mid"], n=param$n_ema_long) # Exponential Moving Average
-  #k <- 1
-  #for (i in (k+1):nrow(d)) d$ema_long[i] <- mean(d$ema_long[(i-k):i], na.rm=T)
-  #for (i in 2:nrow(d)) d$ema_long_slope[i] <- d$ema_long[i] - d$ema_long[i-1]
 
   d$ema_buy_hold <- EMA(d[,"mid"], n=param$n_ema_buy_hold) # Exponential Moving Average
   k <- 1
@@ -58,8 +51,6 @@ compile_data <- function(param, limit=NULL) {
   d$bb_avg_2 <- bb$mavg
   d$bb_hi_2 <- bb$up
   d$bb_lo_2 <- bb$dn
-
-  #for (i in 2:nrow(d)) d$bb_slope[i] <- d$bb_avg[i] - d$bb_avg[i-1]
 
   d$bb_peak_1 <- as.integer(d$open > d$bb_hi_1 | d$close > d$bb_hi_1)
   d$bb_peak_1[is.na(d$bb_peak_1)] <- 0

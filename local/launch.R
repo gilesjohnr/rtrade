@@ -78,8 +78,9 @@ param_default <- list(
 
 t_start <- proc.time()
 
-n <- 1000 # number of LHS replicates
-Y <- geneticLHS(n=n, k=20, pop=50, gen=10, pMut=.25, verbose=T)
+n <- 5000 # number of LHS replicates
+min_win_prob <- 0.5 # minimum win probability
+Y <- geneticLHS(n=n, k=21, pop=50, gen=10, pMut=.25, verbose=T)
 
 Y[,1] <- qunif(Y[,1], 5, 25)     # n_supertrend_1
 Y[,2] <- qunif(Y[,2], 0.75, 3)   # f_supertrend_1
@@ -92,9 +93,9 @@ Y[,7] <- qunif(Y[,7], 6, 25)     # n_ema_buy_hold
 Y[,8] <- qunif(Y[,8], 6, 25)     # n_ema_sell_hold
 Y[,9] <- qunif(Y[,9], 6, 25)     # n_ema_bband_mode
 
-Y[,10] <- qunif(Y[,10], -20, -6)   # slope_threshold_buy_hold
-Y[,11] <- qunif(Y[,11], 6, 20)     # slope_threshold_sell_hold
-Y[,12] <- qunif(Y[,12], 0.5, 6)    # slope_threshold_bband_mode
+Y[,10] <- qunif(Y[,10], -20, -4)   # slope_threshold_buy_hold
+Y[,11] <- qunif(Y[,11], 4, 20)     # slope_threshold_sell_hold
+Y[,12] <- qunif(Y[,12], 0.5, 5)    # slope_threshold_bband_mode
 
 Y[,13] <- qunif(Y[,13], 10, 30)      # n_bbands_1
 Y[,14] <- qunif(Y[,14], 0.5, 1.5)    # sd_bbands_1
@@ -160,8 +161,7 @@ for (i in 1:n) {
                           win_prob = tmp$win_prob,
                           percent_change = tmp$percent_change,
                           per_trade = round(tmp$percent_change/tmp$n_trades, 2),
-                          actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100,
-                          as.data.frame(tmp_param))
+                          actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100)
   )
 
 }
@@ -178,30 +178,28 @@ message(paste('Runtime:', round(as.numeric(t_stop["elapsed"])/60, 2), 'minutes')
 out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
 out$percent_change <- round(out$percent_change, 1)
 out$per_trade <- round(out$per_trade, 1)
+out$times_baseline <- out$percent_change/out$actual
+
+out <- out[rev(rank(order(out$percent_change, out$per_trade), ties.method='first')),]
+ranks <- sapply(out[,c('percent_change', 'n_trades', 'per_trade', 'win_prob')], rank, ties.method='average')
+out$score <- rowMeans(ranks)
+out <- out[order(out$percent_change, decreasing=TRUE),]
+
 sel <- out$win_prob > min_win_prob
 if (!any(sel)) stop('No runs with win probability above threshold')
 
-out_best <- out[out$percent_change > out$actual,]
-out_best <- out[out$win_prob > 0.5,]
-out_best <- out_best[out_best$n_trades > 1,]
-out_best <- out_best[rev(rank(order(out_best$percent_change, out_best$per_trade), ties.method='first')),]
-
-ranks <- sapply(out_best[,c('percent_change', 'n_trades', 'per_trade', 'win_prob')], rank, ties.method='average')
-out_best$score <- rowMeans(ranks)
-out_best <- out_best[order(out_best$score, decreasing=TRUE),]
-out_best[1:10,]
+out[1:10,]
 
 
-
-param_best <- map_lhs_to_param(Y, param=param_default, i=out_best$i[1])
+param_best <- map_lhs_to_param(Y, param=param_default, i=out$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param=param_default, i=9745) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=519) # Manual override
 
 }
 
-best <- run_trade_algo(param=param_default, live=FALSE)
+#best <- run_trade_algo(param=param_default, live=FALSE)
 best <- run_trade_algo(param=param_best, live=FALSE)
 
 
@@ -252,7 +250,7 @@ par(mfrow=c(1,1))
 # Cache best fit parameters
 #-------------------------------------------------------------------------------
 
-
+saveRDS(out, file.path(getwd(), 'output', 'lhs_results.rds'))
 saveRDS(param_best, file.path(getwd(), 'output', 'param_best.rds'))
 
 
