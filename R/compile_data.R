@@ -1,4 +1,4 @@
-compile_data <- function(param, limit=NULL) {
+compile_data <- function(param, time_stop=NULL, limit=NULL) {
 
   if (is.null(limit)) limit <- param$limit
 
@@ -6,6 +6,7 @@ compile_data <- function(param, limit=NULL) {
   d <- get_klines(symbol = param$symbol,
                   interval = param$interval_short,
                   limit = limit,
+                  time_stop = time_stop,
                   verbose = FALSE)
 
   d <- cbind(d, clean_dates(d$time_open))
@@ -47,11 +48,6 @@ compile_data <- function(param, limit=NULL) {
   d$bb_hi_1 <- bb$up
   d$bb_lo_1 <- bb$dn
 
-  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands_2), sd=param$sd_bbands_2))
-  d$bb_avg_2 <- bb$mavg
-  d$bb_hi_2 <- bb$up
-  d$bb_lo_2 <- bb$dn
-
   d$bb_peak_1 <- as.integer(d$open > d$bb_hi_1 | d$close > d$bb_hi_1)
   d$bb_peak_1[is.na(d$bb_peak_1)] <- 0
   d$bb_peak_seq_1 <- d$bb_peak_1
@@ -61,11 +57,6 @@ compile_data <- function(param, limit=NULL) {
   d$bb_dip_1[is.na(d$bb_dip_1)] <- 0
   d$bb_dip_seq_1 <- d$bb_dip_1
   for (i in 2:nrow(d)) if (d$bb_dip_seq_1[i] > 0) d$bb_dip_seq_1[i] <- d$bb_dip_seq_1[i] + d$bb_dip_seq_1[i-1]
-
-  d$bb_peak_2 <- as.integer(d$open > d$bb_hi_2 | d$close > d$bb_hi_2)
-  d$bb_peak_2[is.na(d$bb_peak_2)] <- 0
-  d$bb_peak_seq_2 <- d$bb_peak_2
-  for (i in 2:nrow(d)) if (d$bb_peak_seq_2[i] > 0) d$bb_peak_seq_2[i] <- d$bb_peak_seq_2[i] + d$bb_peak_seq_2[i-1]
 
 
   return(d)

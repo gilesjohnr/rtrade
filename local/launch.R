@@ -30,7 +30,7 @@ param_default <- list(
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '5m', # in minutes
-  limit = 1000, # pmin(1000, 12*72),
+  limit = pmin(1000, 12*(24+3)),
 
   sleep_bt_runs = 10,
   sleep_bt_orders = 30,
@@ -54,10 +54,6 @@ param_default <- list(
   sd_bbands_1 = 1, # Number of standard deviations in Bollinger bands
   seq_bbands_1 = 1,
 
-  n_bbands_2 = 20,    # Number of time steps to use in Bollinger bands
-  sd_bbands_2 = 2, # Number of standard deviations in Bollinger bands
-  seq_bbands_2= 3,
-
   n_atr = 12,
   f_atr = 1.5, # factor to multiple ATR by when determining sell stop
   risk_ratio = 10,
@@ -78,14 +74,14 @@ param_default <- list(
 
 t_start <- proc.time()
 
-n <- 5000 # number of LHS replicates
+n <- 2000 # number of LHS replicates
 min_win_prob <- 0.5 # minimum win probability
 Y <- geneticLHS(n=n, k=21, pop=50, gen=10, pMut=.25, verbose=T)
 
-Y[,1] <- qunif(Y[,1], 5, 25)     # n_supertrend_1
-Y[,2] <- qunif(Y[,2], 0.75, 3)   # f_supertrend_1
-Y[,3] <- qunif(Y[,3], 5, 25)     # n_supertrend_2
-Y[,4] <- qunif(Y[,4], 0.75, 3)   # f_supertrend_2
+Y[,1] <- qunif(Y[,1], 5, 30)     # n_supertrend_1
+Y[,2] <- qunif(Y[,2], 0.75, 2)   # f_supertrend_1
+Y[,3] <- qunif(Y[,3], 5, 30)     # n_supertrend_2
+Y[,4] <- qunif(Y[,4], 0.75, 2)   # f_supertrend_2
 
 Y[,5] <- qunif(Y[,5], 6, 25)     # n_ema_short
 Y[,6] <- qunif(Y[,6], 25, 75)    # n_ema_long
@@ -95,19 +91,15 @@ Y[,9] <- qunif(Y[,9], 6, 25)     # n_ema_bband_mode
 
 Y[,10] <- qunif(Y[,10], -20, -4)   # slope_threshold_buy_hold
 Y[,11] <- qunif(Y[,11], 4, 20)     # slope_threshold_sell_hold
-Y[,12] <- qunif(Y[,12], 0.5, 5)    # slope_threshold_bband_mode
+Y[,12] <- qunif(Y[,12], 0.5, 4)    # slope_threshold_bband_mode
 
 Y[,13] <- qunif(Y[,13], 10, 30)      # n_bbands_1
 Y[,14] <- qunif(Y[,14], 0.5, 1.5)    # sd_bbands_1
-Y[,15] <- qunif(Y[,15], 1, 2)        # seq_bbands_1
+Y[,15] <- qunif(Y[,15], 1, 4)        # seq_bbands_1
 
-Y[,16] <- qunif(Y[,16], 10, 30)      # n_bbands_2
-Y[,17] <- qunif(Y[,17], 1.75, 3)     # sd_bbands_2
-Y[,18] <- qunif(Y[,18], 3, 5)        # seq_bbands_2
-
-Y[,19] <- qunif(Y[,19], 6, 25)    # n_atr
-Y[,20] <- qunif(Y[,20], 1, 3)     # f_atr
-Y[,21] <- qunif(Y[,21], 1, 20)    # risk_ratio
+Y[,16] <- qunif(Y[,16], 6, 25)    # n_atr
+Y[,17] <- qunif(Y[,17], 1, 2)     # f_atr
+Y[,18] <- qunif(Y[,18], 1, 50)    # risk_ratio
 
 
 
@@ -133,13 +125,9 @@ map_lhs_to_param <- function(Y, param, i) {
   param$sd_bbands_1 <- Y[i,14]
   param$seq_bbands_1 <- Y[i,15]
 
-  param$n_bbands_2 <- Y[i,16]
-  param$sd_bbands_2 <- Y[i,17]
-  param$seq_bbands_2 <- Y[i,18]
-
-  param$n_atr <- Y[i,19]
-  param$f_atr <- Y[i,20]
-  param$risk_ratio <- Y[i,21]
+  param$n_atr <- Y[i,16]
+  param$f_atr <- Y[i,17]
+  param$risk_ratio <- Y[i,18]
 
   return(param)
 
@@ -147,13 +135,14 @@ map_lhs_to_param <- function(Y, param, i) {
 
 
 out <- data.frame()
+time_pin <- get_timestamp() # Pin the stop time so that all simulations have same data
 
 for (i in 1:n) {
 
   message(i)
-  tmp_param <- map_lhs_to_param(Y, param=param_default, i)
 
-  tmp <- run_trade_algo(param=tmp_param, live=FALSE, verbose=FALSE)
+  tmp_param <- map_lhs_to_param(Y, param=param_default, i)
+  tmp <- run_trade_algo_paper(param=tmp_param, time_stop=time_pin, verbose=FALSE)
 
   out <- rbind(out,
                data.frame(i = i,
@@ -161,7 +150,8 @@ for (i in 1:n) {
                           win_prob = tmp$win_prob,
                           percent_change = tmp$percent_change,
                           per_trade = round(tmp$percent_change/tmp$n_trades, 2),
-                          actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100)
+                          actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100,
+                          as.data.frame(tmp_param))
   )
 
 }
@@ -195,7 +185,7 @@ param_best <- map_lhs_to_param(Y, param=param_default, i=out$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param=param_default, i=519) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=2156) # Manual override
 
 }
 
@@ -217,7 +207,7 @@ msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$
 #layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
 par(mfrow=c(3,1), xpd=F)
 
-plot(d$date_time, d$close, type='l', main=param_default$symbol)
+plot(d$date_time, d$close, type='l', main=best$param$symbol)
 lines(d$date_time, d$bb_avg, lwd=0.75, col='darkorange')
 lines(d$date_time, d$bb_hi, lwd=0.5, col='goldenrod')
 lines(d$date_time, d$bb_lo, lwd=0.5, col='goldenrod')
@@ -256,6 +246,7 @@ saveRDS(param_best, file.path(getwd(), 'output', 'param_best.rds'))
 
 if (FALSE) {
 
+  out <- readRDS(file.path(getwd(), 'output', 'lhs_results.rds'))
   param_best <- readRDS(file.path(getwd(), 'output', 'param_best.rds'))
 
 }

@@ -42,21 +42,6 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
 
     }
 
-    # BUY IF short-term upward trend kick off (should have BUY done going into HOLD SELL zone)
-
-    #if (!is.na(d$supertrend_1[t]) & !is.na(d$ema_sell_hold_slope[t-1])) {
-
-    #  Y <- d$mid[t] > d$supertrend_1[t] & d$ema_sell_hold_slope[t-1] <= param$slope_threshold_sell_hold & d$ema_sell_hold_slope[t] > param$slope_threshold_sell_hold
-
-    #  if (Y) {
-    #    if (verbose) message(":: LOGIC BUY (short term uptrend) ::")
-    #    logic_buy <- !Y
-    #  }
-
-    #}
-
-
-
 
     # Only allow BUY if not in short-term downward trend
     if (!is.na(d$ema_buy_hold_slope[t])) {
@@ -87,15 +72,34 @@ get_buy_logic <- function(d, t, param, live=FALSE, verbose=TRUE) {
   }
 
 
+  if (TRUE) {
 
-  # IF ema_short crosses ABOVE ema_long trigger BUY
-  if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
 
-    Y <- d$ema_short[t-1] <= d$ema_long[t-1] & d$ema_short[t] > d$ema_long[t]
+    # BUY IF short-term upward trend kick off (should have BUY done going into HOLD SELL zone)
 
-    if (Y) {
-      if (verbose) message(":: Logic BUY (EMA cross) ::")
-      logic_buy <- Y
+    if (!is.na(d$supertrend_1[t]) & !is.na(d$ema_sell_hold_slope[t-1])) {
+
+      Y <- d$mid[t] > d$supertrend_1[t] & d$ema_sell_hold_slope[t-1] <= param$slope_threshold_sell_hold & d$ema_sell_hold_slope[t] > param$slope_threshold_sell_hold
+
+      if (Y) {
+        if (verbose) message(":: LOGIC BUY (short term uptrend) ::")
+        logic_buy <- !Y
+      }
+
+    }
+
+
+
+    # IF ema_short crosses ABOVE ema_long trigger BUY
+    if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
+
+      Y <- d$ema_short[t-1] <= d$ema_long[t-1] & d$ema_short[t] > d$ema_long[t]
+
+      if (Y) {
+        if (verbose) message(":: Logic BUY (EMA cross) ::")
+        logic_buy <- Y
+      }
+
     }
 
   }

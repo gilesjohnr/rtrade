@@ -50,14 +50,6 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
     }
 
 
-    # SELL IF there are sequential time steps that peak above bband 2
-    if (!is.na(d$bb_peak_seq_2[t])) {
-
-      logic_sell <- d$bb_peak_seq_2[t] >= param$seq_bbands_2
-      if (logic_sell & verbose) message(":: Logic SELL (bband uptrend peak) ::")
-
-    }
-
 
     # HOLD IF there is a short term uptrend
     if (!is.na(d$ema_sell_hold_slope[t])) {
@@ -76,14 +68,18 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
   }
 
 
-  # IF ema_short crosses BELOW ema_long trigger SELL
-  if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
+  if (TRUE) {
 
-    Y <- d$ema_short[t-1] >= d$ema_long[t-1] & d$ema_short[t] < d$ema_long[t]
+    # IF ema_short crosses BELOW ema_long trigger SELL
+    if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
 
-    if (Y) {
-      if (verbose) message(":: Logic SELL (EMA cross) ::")
-      logic_sell <- Y
+      Y <- d$ema_short[t-1] >= d$ema_long[t-1] & d$ema_short[t] < d$ema_long[t]
+
+      if (Y) {
+        if (verbose) message(":: Logic SELL (EMA cross) ::")
+        logic_sell <- Y
+      }
+
     }
 
   }

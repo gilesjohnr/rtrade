@@ -283,6 +283,13 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
       if (display) {
 
+        bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=20, sd=2.25))
+        #d$bb_avg_2 <- bb$mavg
+        d$bb_hi_2 <- bb$up
+        #d$bb_lo_2 <- bb$dn
+
+        sel <- d$ema_bband_mode_slope < param$slope_threshold_bband_mode & d$ema_bband_mode_slope > -1*param$slope_threshold_bband_mode
+        d$ema_bband_mode[!sel] <- NA
 
         tmp <- get_all_orders(symbol = param$symbol)
         tmp <- tmp[tmp$status %in% c('FILLED', 'PARTIALLY FILLED'),]
@@ -297,8 +304,9 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
         lines(d$date_time, d$bb_hi_1, lwd=0.5, col='goldenrod')
         lines(d$date_time, d$bb_lo_1, lwd=0.5, col='goldenrod')
         lines(d$date_time, d$bb_hi_2, lwd=0.5, col='grey50', lty=3)
-        lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
         lines(d$date_time, d$ema_long, lwd=2, col='darkblue')
+        lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
+        points(d$date_time, d$ema_bband_mode, col='cyan4')
         lines(d$date_time, d$supertrend_1, type='l', lwd=1.5, col='pink')
         lines(d$date_time, d$supertrend_2, type='l', lwd=1.5, col='purple3')
 

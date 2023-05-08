@@ -1,13 +1,12 @@
-run_trade_algo_paper <- function(param, verbose=TRUE) {
+run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
 
 
   #-------------------------------------------------------------------------
   # Get current data
   #-------------------------------------------------------------------------
 
-  d <- compile_data(param=param)
+  d <- compile_data(param=param, time_stop=time_stop)
   t <- which.max(d$date_time)
-
 
 
   #-------------------------------------------------------------------------
