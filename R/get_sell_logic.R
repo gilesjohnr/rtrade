@@ -2,65 +2,39 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
   logic_sell <- FALSE
 
-  if (!is.na(d$ema_bband_mode_slope[t]) & d$ema_bband_mode_slope[t] < param$slope_threshold_bband_mode & d$ema_bband_mode_slope[t] > -1*param$slope_threshold_bband_mode ) {
-
-    # SIDEWAYS TREND
-    if (verbose) message(":: Sideways trend ::")
-
-    if (!is.na(d$bb_peak_seq_1[t])) {
-
-      logic_sell <- d$bb_peak_seq_1[t] >= param$seq_bbands_1
-      if (logic_sell & verbose) message(":: Logic SELL (bband sideways peak) ::")
-
-    }
-
-  } else {
-
+  if (!is.na(d$supertrend_2_sell[t-1])) {
 
     if (d$supertrend_2_sell[t] < d$mid[t]) {
-      logic_sell <- d$supertrend_2_sell[t] == 1
+      logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
     } else {
-      logic_sell <- d$supertrend_1_sell[t] == 1
+      logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1
     }
 
+  }
 
-    if (logic_sell) {
+  if (logic_sell) {
 
-      if (verbose) message(":: Logic SELL (short sell) ::")
+    if (verbose) message(":: Logic SELL (short sell) ::")
 
-      if (live & param$double_check) {
+    if (live & param$double_check) {
 
-        if (verbose) message(":: Double-checking SELL trigger ::")
-        Sys.sleep(param$double_check_wait)
+      if (verbose) message(":: Double-checking SELL trigger ::")
+      Sys.sleep(param$double_check_wait)
 
-        d <- compile_data(param=param)
-        tt <- which.max(d$time_close)
+      d <- compile_data(param=param, limit=100)
+      t <- which.max(d$time_close)
 
-        if (d$supertrend_2_sell[tt] < d$mid[tt]) {
-          logic_sell <- d$supertrend_2_sell[tt] == 1
+      if (!is.na(d$supertrend_2_sell[t-1])) {
+
+        if (d$supertrend_2_sell[t] < d$mid[t]) {
+          logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
         } else {
-          logic_sell <- d$supertrend_1_sell[tt] == 1
+          logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1
         }
 
-        if (verbose) message(ifelse(logic_sell, 'Positive', 'False-positive'))
-
       }
 
-
-    }
-
-
-
-    # HOLD IF there is a short term uptrend
-    if (!is.na(d$ema_sell_hold_slope[t])) {
-
-      Y <- d$ema_sell_hold_slope[t] > param$slope_threshold_sell_hold
-
-      if (Y) {
-
-        if (verbose) message(glue(":: HOLD SELL (long term uptrend) ::"))
-        logic_sell <- !Y
-      }
+      if (verbose) message(ifelse(logic_sell, 'Positive', 'False-positive'))
 
     }
 
@@ -68,21 +42,50 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
   }
 
 
-  if (TRUE) {
 
-    # IF ema_short crosses BELOW ema_long trigger SELL
-    if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
+  # HOLD IF there is a short term uptrend
+  if (!is.na(d$ema_sell_hold_slope[t])) {
 
-      Y <- d$ema_short[t-1] >= d$ema_long[t-1] & d$ema_short[t] < d$ema_long[t]
+    Y <- d$ema_sell_hold_slope[t] > param$slope_threshold_sell_hold
 
-      if (Y) {
-        if (verbose) message(":: Logic SELL (EMA cross) ::")
-        logic_sell <- Y
-      }
-
+    if (Y) {
+      if (verbose) message(glue(":: HOLD SELL (long term uptrend) ::"))
+      logic_sell <- !Y
     }
 
   }
+
+
+
+  # SELL IF short-term SELL trigger occurs just before long-term SELL hold expires
+  if (!is.na(d$ema_sell_hold_slope[t-1]) & !is.na(d$supertrend_2_sell[t-2])) {
+
+    Y <- d$ema_sell_hold_slope[t] <= param$slope_threshold_sell_hold & d$ema_sell_hold_slope[t-1] > param$slope_threshold_sell_hold & any(d$supertrend_2_sell[(t-2):t] == 1)
+
+    if (Y) {
+      logic_sell <- Y
+      if (verbose) message(":: Logic SELL (short sell just before trend change) ::")
+    }
+
+  }
+
+
+
+  # IF in side-trend, sell when above bband high
+  if (!is.na(d$ema_sell_hold_slope[t]) & !is.na(d$bb_hi[t])) {
+
+    Y <- abs(d$ema_sell_hold_slope[t]) < param$slope_threshold_bband & d$close[t] > d$bb_hi[t]
+
+    if (Y) {
+      logic_sell <- Y
+      if (verbose) message(":: Logic SELL (sidetrend bband high) ::")
+    }
+
+
+  }
+
+
+
 
 
   # SELL IF price moves outside set risk ratio bounds

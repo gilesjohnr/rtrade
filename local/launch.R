@@ -29,10 +29,10 @@ param_default <- list(
 
   asset = 'BTC',
   symbol = 'BTCUSD',
-  interval_short = '5m', # in minutes
-  limit = pmin(1000, 12*(24+3)),
+  interval_short = '1m', # in minutes
+  limit = pmin(1000, 60*(24+3)),
 
-  sleep_bt_runs = 10,
+  sleep_bt_runs = 2,
   sleep_bt_orders = 30,
 
   n_supertrend_1 = 20,    # Supertrend for BUY signals
@@ -40,29 +40,25 @@ param_default <- list(
   n_supertrend_2 = 10,    # Supertrend for SELL signals
   f_supertrend_2 = 1.05,
 
-  n_ema_short = 10, # Short-term Exponential Moving Average
-  n_ema_long = 45, # Long-term Exponential Moving Average
-  n_ema_buy_hold = 12,
-  n_ema_sell_hold = 12,
-  n_ema_bband_mode = 15,
+  n_ema_buy_hold = 16,
+  n_ema_sell_hold = 18,
 
-  slope_threshold_buy_hold = -4, # below this, do not buy
-  slope_threshold_sell_hold = 6, # above this, do not sell
-  slope_threshold_bband_mode = 4,
-
-  n_bbands_1 = 20,    # Number of time steps to use in Bollinger bands
-  sd_bbands_1 = 1, # Number of standard deviations in Bollinger bands
-  seq_bbands_1 = 1,
+  slope_threshold_buy_hold = 17, # below this, do not buy
+  slope_threshold_sell_hold = 16, # above this, do not sell
 
   n_atr = 12,
   f_atr = 1.5, # factor to multiple ATR by when determining sell stop
-  risk_ratio = 10,
+  risk_ratio = 50,
 
-  time_window = 4000,        # Window of time orders are good for on the server (milliseconds)
+  n_bband = 20,
+  sd_bband = 2,
+  slope_threshold_bband = 1.5,
+
+  time_window = 5000,        # Window of time orders are good for on the server (milliseconds)
   wait_and_see = TRUE,      # wait until time step is a portion complete before acting
-  wait_and_see_prop = 0.5/5,
+  wait_and_see_prop = 5/60,
   double_check = TRUE,       # when short buy/sell triggered, wait X seconds then double check the logic
-  double_check_wait = 10     # in seconds
+  double_check_wait = 5     # in seconds
 
 )
 
@@ -74,32 +70,27 @@ param_default <- list(
 
 t_start <- proc.time()
 
-n <- 2000 # number of LHS replicates
-min_win_prob <- 0.5 # minimum win probability
-Y <- geneticLHS(n=n, k=21, pop=50, gen=10, pMut=.25, verbose=T)
+n <- 5000 # number of LHS replicates
+Y <- geneticLHS(n=n, k=13, pop=50, gen=10, pMut=0.25, verbose=T)
 
-Y[,1] <- qunif(Y[,1], 5, 30)     # n_supertrend_1
-Y[,2] <- qunif(Y[,2], 0.75, 2)   # f_supertrend_1
-Y[,3] <- qunif(Y[,3], 5, 30)     # n_supertrend_2
-Y[,4] <- qunif(Y[,4], 0.75, 2)   # f_supertrend_2
+Y[,1] <- qunif(Y[,1], 5, 30)      # n_supertrend_1
+Y[,2] <- qunif(Y[,2], 1, 3)   # f_supertrend_1
+Y[,3] <- qunif(Y[,3], 5, 30)      # n_supertrend_2
+Y[,4] <- qunif(Y[,4], 1, 3)   # f_supertrend_2
 
-Y[,5] <- qunif(Y[,5], 6, 25)     # n_ema_short
-Y[,6] <- qunif(Y[,6], 25, 75)    # n_ema_long
-Y[,7] <- qunif(Y[,7], 6, 25)     # n_ema_buy_hold
-Y[,8] <- qunif(Y[,8], 6, 25)     # n_ema_sell_hold
-Y[,9] <- qunif(Y[,9], 6, 25)     # n_ema_bband_mode
+Y[,5] <- qunif(Y[,5], 6, 30)     # n_ema_buy_hold
+Y[,6] <- qunif(Y[,6], 6, 30)     # n_ema_sell_hold
 
-Y[,10] <- qunif(Y[,10], -20, -4)   # slope_threshold_buy_hold
-Y[,11] <- qunif(Y[,11], 4, 20)     # slope_threshold_sell_hold
-Y[,12] <- qunif(Y[,12], 0.5, 4)    # slope_threshold_bband_mode
+Y[,7] <- qunif(Y[,7], -15, -1)   # slope_threshold_buy_hold
+Y[,8] <- qunif(Y[,8], 1, 15)    # slope_threshold_sell_hold
 
-Y[,13] <- qunif(Y[,13], 10, 30)      # n_bbands_1
-Y[,14] <- qunif(Y[,14], 0.5, 1.5)    # sd_bbands_1
-Y[,15] <- qunif(Y[,15], 1, 4)        # seq_bbands_1
+Y[,9] <- qunif(Y[,9], 6, 30)    # n_atr
+Y[,10] <- qunif(Y[,10], 1, 2)   # f_atr
 
-Y[,16] <- qunif(Y[,16], 6, 25)    # n_atr
-Y[,17] <- qunif(Y[,17], 1, 2)     # f_atr
-Y[,18] <- qunif(Y[,18], 1, 50)    # risk_ratio
+Y[,11] <- qunif(Y[,11], 15, 25)       # n_bband
+Y[,12] <- qunif(Y[,12], 1.75, 2.25)   # sd_bband
+Y[,13] <- qunif(Y[,13], 0.5, 2.5)     # slope_threshold_bband
+
 
 
 
@@ -110,24 +101,18 @@ map_lhs_to_param <- function(Y, param, i) {
   param$n_supertrend_2 <- Y[i,3]
   param$f_supertrend_2 <- Y[i,4]
 
-  param$n_ema_short <- Y[i,5]
-  param$n_ema_long <- Y[i,6]
+  param$n_ema_buy_hold <- Y[i,5]
+  param$n_ema_sell_hold <- Y[i,6]
 
-  param$n_ema_buy_hold <- Y[i,7]
-  param$n_ema_sell_hold <- Y[i,8]
-  param$n_ema_bband_mode <- Y[i,9]
+  param$slope_threshold_buy_hold <- Y[i,7]
+  param$slope_threshold_sell_hold <- Y[i,8]
 
-  param$slope_threshold_buy_hold <- Y[i,10]
-  param$slope_threshold_sell_hold <- Y[i,11]
-  param$slope_threshold_bband_mode <- Y[i,12]
+  param$n_atr <- Y[i,9]
+  param$f_atr <- Y[i,10]
 
-  param$n_bbands_1 <- Y[i,13]
-  param$sd_bbands_1 <- Y[i,14]
-  param$seq_bbands_1 <- Y[i,15]
-
-  param$n_atr <- Y[i,16]
-  param$f_atr <- Y[i,17]
-  param$risk_ratio <- Y[i,18]
+  param$n_bband <- Y[i,11]
+  param$sd_bband <- Y[i,12]
+  param$slope_threshold_bband <- Y[i,13]
 
   return(param)
 
@@ -171,12 +156,11 @@ out$per_trade <- round(out$per_trade, 1)
 out$times_baseline <- out$percent_change/out$actual
 
 out <- out[rev(rank(order(out$percent_change, out$per_trade), ties.method='first')),]
-ranks <- sapply(out[,c('percent_change', 'n_trades', 'per_trade', 'win_prob')], rank, ties.method='average')
+ranks <- sapply(out[,c('percent_change', 'per_trade', 'win_prob')], rank, ties.method='average')
 out$score <- rowMeans(ranks)
-out <- out[order(out$percent_change, decreasing=TRUE),]
+#out <- out[order(out$score, decreasing=TRUE),]
+out <- out[order(out$percent_change, out$win_prob, decreasing=TRUE),]
 
-sel <- out$win_prob > min_win_prob
-if (!any(sel)) stop('No runs with win probability above threshold')
 
 out[1:10,]
 
@@ -185,7 +169,7 @@ param_best <- map_lhs_to_param(Y, param=param_default, i=out$i[1])
 
 if (FALSE) {
 
-  param_best <- map_lhs_to_param(Y, param=param_default, i=2156) # Manual override
+  param_best <- map_lhs_to_param(Y, param=param_default, i=1589) # Manual override
 
 }
 
@@ -208,13 +192,9 @@ msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$
 par(mfrow=c(3,1), xpd=F)
 
 plot(d$date_time, d$close, type='l', main=best$param$symbol)
-lines(d$date_time, d$bb_avg, lwd=0.75, col='darkorange')
-lines(d$date_time, d$bb_hi, lwd=0.5, col='goldenrod')
-lines(d$date_time, d$bb_lo, lwd=0.5, col='goldenrod')
+
 lines(d$date_time, d$supertrend_1, col='green3')
 lines(d$date_time, d$supertrend_2, col='red3')
-lines(d$date_time, d$ema_short, col='cyan4')
-lines(d$date_time, d$ema_long, col='darkblue')
 
 abline(v=trades$date_time[trades$action == 'buy'], col='green3')
 abline(v=trades$date_time[trades$action == 'sell'], col='red3')
@@ -260,4 +240,20 @@ if (FALSE) {
 run_trade_algo(param=param_best, live=TRUE)
 
 
+
+
+#-------------------------------------------------------------------------------
+# Use with caution: quick BUY and SELL orders
+#-------------------------------------------------------------------------------
+
+if (FALSE) {
+
+
+  qb() # Quick BUY
+
+
+  qs() # Quick SELL
+
+
+}
 

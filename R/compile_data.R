@@ -11,6 +11,7 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
 
   d <- cbind(d, clean_dates(d$time_open))
 
+
   st <- calc_supertrend(HLC=d[,c("high","low","close")], n=param$n_supertrend_1, f=param$f_supertrend_1)
   d$supertrend_1 <- st$supertrend
   d$supertrend_1_buy <- st$buy
@@ -21,11 +22,6 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
   d$supertrend_2_buy <- st$buy
   d$supertrend_2_sell <- st$sell
 
-  d$atr <- as.data.frame(ATR(d[,c("high","low","close")], n=param$n_atr))$atr
-
-
-  d$ema_short <- EMA(d[,"mid"], n=param$n_ema_short) # Exponential Moving Average
-  d$ema_long <- EMA(d[,"mid"], n=param$n_ema_long) # Exponential Moving Average
 
   d$ema_buy_hold <- EMA(d[,"mid"], n=param$n_ema_buy_hold) # Exponential Moving Average
   k <- 1
@@ -37,26 +33,13 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
   for (i in (k+1):nrow(d)) d$ema_sell_hold[i] <- mean(d$ema_sell_hold[(i-k):i], na.rm=T)
   for (i in 2:nrow(d)) d$ema_sell_hold_slope[i] <- d$ema_sell_hold[i] - d$ema_sell_hold[i-1]
 
-  d$ema_bband_mode <- EMA(d[,"mid"], n=param$n_ema_bband_mode) # Exponential Moving Average
-  k <- 1
-  for (i in (k+1):nrow(d)) d$ema_bband_mode[i] <- mean(d$ema_bband_mode[(i-k):i], na.rm=T)
-  for (i in 2:nrow(d)) d$ema_bband_mode_slope[i] <- d$ema_bband_mode[i] - d$ema_bband_mode[i-1]
 
+  d$atr <- as.data.frame(ATR(d[,c("high","low","close")], n=param$n_atr))$atr
 
-  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands_1), sd=param$sd_bbands_1))
-  d$bb_avg_1 <- bb$mavg
-  d$bb_hi_1 <- bb$up
-  d$bb_lo_1 <- bb$dn
-
-  d$bb_peak_1 <- as.integer(d$open > d$bb_hi_1 | d$close > d$bb_hi_1)
-  d$bb_peak_1[is.na(d$bb_peak_1)] <- 0
-  d$bb_peak_seq_1 <- d$bb_peak_1
-  for (i in 2:nrow(d)) if (d$bb_peak_seq_1[i] > 0) d$bb_peak_seq_1[i] <- d$bb_peak_seq_1[i] + d$bb_peak_seq_1[i-1]
-
-  d$bb_dip_1 <- as.integer(d$open < d$bb_lo_1 | d$close < d$bb_lo_1)
-  d$bb_dip_1[is.na(d$bb_dip_1)] <- 0
-  d$bb_dip_seq_1 <- d$bb_dip_1
-  for (i in 2:nrow(d)) if (d$bb_dip_seq_1[i] > 0) d$bb_dip_seq_1[i] <- d$bb_dip_seq_1[i] + d$bb_dip_seq_1[i-1]
+  bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=param$n_bband, sd=param$sd_bband))
+  d$bb_avg <- bb$mavg
+  d$bb_hi <- bb$up
+  d$bb_lo <- bb$dn
 
 
   return(d)
