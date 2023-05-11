@@ -9,7 +9,7 @@ qs <- function() {
                              side = 'SELL',
                              type = 'LIMIT',
                              price = ask,
-                             quantity = bal$free[bal$asset == param$asset],
+                             quantity = round(bal$free[bal$asset == param$asset] - 1e-05, 4),
                              time_in_force = 'GTC',
                              time_window = param$time_window)
 

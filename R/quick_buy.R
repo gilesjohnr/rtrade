@@ -11,7 +11,7 @@ qb <- function() {
                             side = 'BUY',
                             type = 'LIMIT',
                             price = bid,
-                            quantity = round(bal_usd/bid - 1e-04, 4),
+                            quantity = round(bal_usd/bid - 1e-05, 4),
                             time_in_force = 'GTC',
                             time_window = param$time_window)
 

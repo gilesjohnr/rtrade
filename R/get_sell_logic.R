@@ -2,9 +2,9 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
   logic_sell <- FALSE
 
-  if (!is.na(d$supertrend_2_sell[t-1])) {
+  if (!is.na(d$supertrend_2[t-1])) {
 
-    if (d$supertrend_2_sell[t] < d$mid[t]) {
+    if (d$supertrend_2[t] < d$mid[t]) {
       logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
     } else {
       logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1
@@ -24,9 +24,9 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
       d <- compile_data(param=param, limit=100)
       t <- which.max(d$time_close)
 
-      if (!is.na(d$supertrend_2_sell[t-1])) {
+      if (!is.na(d$supertrend_2[t-1])) {
 
-        if (d$supertrend_2_sell[t] < d$mid[t]) {
+        if (d$supertrend_2[t] < d$mid[t]) {
           logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
         } else {
           logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1

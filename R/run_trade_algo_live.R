@@ -78,13 +78,13 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
             cancel_all_orders(param$symbol)
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-            bid <- get_order_depth(param_best$symbol)$bid_price[2] + 0.01
+            bid <- get_order_depth(param$symbol)$bid_price[2] + 0.01
 
             buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
                                       type = 'LIMIT',
                                       price = bid,
-                                      quantity = round(bal_usd/bid - 1e-04, 4),
+                                      quantity = round(bal_usd/bid - 1e-05, 4),
                                       time_in_force = 'GTC',
                                       time_window = param$time_window)
 
@@ -98,13 +98,13 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
               bal <- get_account_balance()
               bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
-              bid <- get_order_depth(param_best$symbol)$bid_price[1] + 0.01
+              bid <- get_order_depth(param$symbol)$bid_price[1] + 0.01
 
               buy_order <- create_order(symbol = param$symbol,
                                         side = 'BUY',
                                         type = 'LIMIT',
                                         price = bid,
-                                        quantity = round(bal_usd/bid - 1e-04, 4),
+                                        quantity = round(bal_usd/bid - 1e-05, 4),
                                         time_in_force = 'GTC',
                                         time_window = param$time_window)
 
@@ -121,14 +121,14 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
                 bal <- get_account_balance()
                 bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
 
-                tmp <- get_order_depth(param_best$symbol, limit=1)
+                tmp <- get_order_depth(param$symbol, limit=1)
                 bid <- tmp$bid_price + (tmp$ask_price - tmp$bid_price)*0.25
 
                 buy_order <- create_order(symbol = param$symbol,
                                           side = 'BUY',
                                           type = 'LIMIT',
                                           price = bid,
-                                          quantity = round(bal_usd/bid - 1e-04, 4),
+                                          quantity = round(bal_usd/bid - 1e-05, 4),
                                           time_in_force = 'GTC',
                                           time_window = param$time_window)
 
@@ -152,14 +152,14 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             bal <- get_account_balance()
             bal_usd <- round(bal$free[bal$asset == 'USD'] - 1e-04, 4)
 
-            tmp <- get_order_depth(param_best$symbol, limit=1)
+            tmp <- get_order_depth(param$symbol, limit=1)
             bid <- tmp$bid_price + (tmp$ask_price - tmp$bid_price)*0.25
 
             buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
                                       type = 'LIMIT',
                                       price = bid,
-                                      quantity = round(bal_usd/bid - 1e-04, 4),
+                                      quantity = round(bal_usd/bid - 1e-05, 4),
                                       time_in_force = 'GTC',
                                       time_window = param$time_window)
 
@@ -196,7 +196,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
                                        side = 'SELL',
                                        type = 'LIMIT',
                                        price = ask,
-                                       quantity = bal$free[bal$asset == param$asset],
+                                       quantity = round(bal$free[bal$asset == param$asset] - 1e-05, 4),
                                        time_in_force = 'GTC',
                                        time_window = param$time_window)
 
@@ -217,7 +217,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
                                          side = 'SELL',
                                          type = 'LIMIT',
                                          price = ask,
-                                         quantity = bal$free[bal$asset == param$asset],
+                                         quantity = round(bal$free[bal$asset == param$asset] - 1e-05, 4),
                                          time_in_force = 'GTC',
                                          time_window = param$time_window)
 
@@ -236,7 +236,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
                 sell_order <- create_order(symbol = param$symbol,
                                            side = 'SELL',
                                            type = 'MARKET',
-                                           quantity = bal$free[bal$asset == param$asset],
+                                           quantity = round(bal$free[bal$asset == param$asset] - 1e-05, 4),
                                            time_in_force = 'IOC',
                                            time_window = param$time_window)
 
@@ -260,7 +260,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             sell_order <- create_order(symbol = param$symbol,
                                        side = 'SELL',
                                        type = 'MARKET',
-                                       quantity = bal$free[bal$asset == param$asset],
+                                       quantity = round(bal$free[bal$asset == param$asset] - 1e-05, 4),
                                        time_in_force = 'IOC',
                                        time_window = param$time_window)
 
