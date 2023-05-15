@@ -48,7 +48,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       # Get current data
       #-------------------------------------------------------------------------
 
-      d <- compile_data(param=param, limit=200)
+      d <- compile_data(param=param, limit=param$limit)
       t <- which.max(d$date_time)
 
 
@@ -288,22 +288,30 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
         if (F) d <- compile_data(param_best)
 
+        bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands), sd=param$sd_bbands))
+        d$bb_avg <- bb$mavg
+        d$bb_hi <- bb$up
+        d$bb_lo <- bb$dn
+
         tmp <- get_all_orders(symbol = param$symbol)
         tmp <- tmp[tmp$status %in% c('FILLED', 'PARTIALLY FILLED'),]
 
         if ("RStudioGD" %in% names(dev.list())) dev.off(dev.list()["RStudioGD"])
-        par(mar=c(3,3,2,5), xpd=FALSE)
+        par(mfrow=c(2,1), mar=c(3,3,2,5), xpd=FALSE)
 
         plot_candles(d, main=glue("{param$symbol} | {d$date_time[t]} | Local: {format(Sys.time(), '%H:%M:%S')}"))
-        lines(d$date_time, d$bb_avg, lwd=0.9, col='grey')
-        lines(d$date_time, d$bb_hi, lwd=0.9, col='grey', lty=3)
-        lines(d$date_time, d$bb_lo, lwd=0.9, col='grey', lty=3)
-        lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
-        lines(d$date_time, d$ema_long, lwd=2, col='black')
-        lines(d$date_time, d$supertrend_1, type='l', lwd=1, col='violet')
-        lines(d$date_time, d$supertrend_2, type='l', lwd=1, col='violetred')
-        lines(d$date_time, d$supertrend_3, type='l', lwd=1, col='slateblue2')
-        lines(d$date_time, d$supertrend_4, type='l', lwd=1, col='darkviolet')
+        lines(d$date_time, d$supertrend_1, type='l', lwd=1, col='blue')
+        lines(d$date_time, d$sar, type='l', lwd=1, lty=3, col='cyan3')
+        lines(d$date_time, d$bb_avg, lwd=0.8, col='darkorange')
+        lines(d$date_time, d$bb_hi, lwd=0.8, col='goldenrod', lty=3)
+        lines(d$date_time, d$bb_lo, lwd=0.8, col='goldenrod', lty=3)
+        #lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
+        #lines(d$date_time, d$ema_long, lwd=2, col='black')
+        #lines(d$date_time, d$supertrend_1, type='l', lwd=1, col='violet')
+        #lines(d$date_time, d$supertrend_2, type='l', lwd=1, col='violetred')
+        #lines(d$date_time, d$supertrend_3, type='l', lwd=1, col='slateblue2')
+        #lines(d$date_time, d$supertrend_4, type='l', lwd=1, col='darkviolet')
+
 
         sel <- tmp$side == 'BUY'
         abline(v=tmp$date_time[sel], col='green3', lty=3, lwd=0.5)
@@ -318,6 +326,9 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
         par(xpd=TRUE)
         text(x=max(d$date_time[t])+(60*10), y=d$close[t], label=d$close[t], pos=4)
 
+
+        plot(d$date_time, d$rsi, type='l')
+        abline(h=c(30,70), lwd=0.5, lty=2)
 
 
       }

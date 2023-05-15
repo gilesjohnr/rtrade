@@ -2,20 +2,11 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
   logic_sell <- FALSE
 
-  if (!is.na(d$supertrend_1[t-1]))  logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1
+  if (!is.na(d$supertrend_1[t]) & !is.na(d$sar[t-1])) {
 
-  if (!is.na(d$supertrend_2[t-1])) {
-    if (d$supertrend_2[t] < d$mid[t]) logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
+    logic_sell <- d$supertrend_1_sell[t] == 1 &  d$mid[t] < d$sar[t]
+
   }
-
-  if (!is.na(d$supertrend_3[t-1])) {
-    if (d$supertrend_3[t] < d$mid[t]) logic_sell <- d$supertrend_3_sell[t] == 1 | d$supertrend_3_sell[t-1] == 1
-  }
-
-  #if (!is.na(d$supertrend_4[t-1])) {
-  #  if (d$supertrend_4[t] < d$mid[t]) logic_sell <- d$supertrend_4_sell[t] == 1 | d$supertrend_4_sell[t-1] == 1
-  #}
-
 
   if (logic_sell) {
 
@@ -31,19 +22,11 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
 
       logic_sell <- FALSE
 
-      if (!is.na(d$supertrend_1[t-1]))  logic_sell <- d$supertrend_1_sell[t] == 1 | d$supertrend_1_sell[t-1] == 1
+      if (!is.na(d$supertrend_1[t]) & !is.na(d$sar[t])) {
 
-      if (!is.na(d$supertrend_2[t-1])) {
-        if (d$supertrend_2[t] < d$mid[t]) logic_sell <- d$supertrend_2_sell[t] == 1 | d$supertrend_2_sell[t-1] == 1
+        logic_sell <- d$supertrend_1_sell[t] == 1 & d$sar[t] < d$mid[t]
+
       }
-
-      if (!is.na(d$supertrend_3[t-1])) {
-        if (d$supertrend_3[t] < d$mid[t]) logic_sell <- d$supertrend_3_sell[t] == 1 | d$supertrend_3_sell[t-1] == 1
-      }
-
-      #if (!is.na(d$supertrend_4[t-1])) {
-      #  if (d$supertrend_4[t] < d$mid[t]) logic_sell <- d$supertrend_4_sell[t] == 1 | d$supertrend_4_sell[t-1] == 1
-      #}
 
       if (verbose) message(ifelse(logic_sell, 'Positive', 'False-positive'))
 
@@ -53,46 +36,6 @@ get_sell_logic <- function(d, t, param, live=TRUE, trades=NULL, verbose=TRUE) {
   }
 
 
-  # SELL IF last 3 closing price above bband hi
-  n <- round(param$n_above_bband_hi, 0)
-  if (!is.na(d$bb_hi[t-n])) {
-
-    Y <- all(d$close[(t-n):t] >= d$bb_hi[(t-n):t] | d$open[(t-n):t] >= d$bb_hi[(t-n):t])
-
-    if (Y) {
-
-      if (verbose) message(glue(":: Logic SELL (action above bband hi) ::"))
-      logic_sell <- Y
-    }
-
-  }
-
-
-  # HOLD IF there is a short term uptrend
-  if (!is.na(d$ema_short_slope[t])) {
-
-    Y <- d$ema_short_slope[t] > param$slope_threshold_sell_hold
-
-    if (Y) {
-
-      if (verbose) message(glue(":: HOLD SELL (upward trend) ::"))
-      logic_sell <- !Y
-    }
-
-  }
-
-
-  # IF ema_short crosses BELOW ema_long trigger SELL
-  if (!is.na(d$ema_short[t-1]) & !is.na(d$ema_long[t-1])) {
-
-    Y <- d$ema_short[t-1] >= d$ema_long[t-1] & d$ema_short[t] < d$ema_long[t]
-
-    if (Y) {
-      if (verbose) message(":: Logic SELL (EMA cross) ::")
-      logic_sell <- Y
-    }
-
-  }
 
 
 

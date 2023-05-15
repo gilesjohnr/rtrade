@@ -33,39 +33,34 @@ param_default <- list(
   limit = pmin(1000, 60*(24+3)),
 
   sleep_bt_runs = 3,
-  sleep_bt_orders = 25,
+  sleep_bt_orders = 30,
 
-  n_supertrend_1 = 23,    # Supertrend for BUY signals
-  f_supertrend_1 = 0.96,
+  n_supertrend_1 = 20,    # Supertrend for BUY signals
+  f_supertrend_1 = 1.25,
 
-  n_supertrend_2 = 18,    # Supertrend for SELL signals
-  f_supertrend_2 = 1.4,
+  accel_sar = 0.02,       # Parabolic SAR
+  max_accel_sar = 0.2,
 
-  n_supertrend_3 = 5,    # Supertrend for SELL signals
-  f_supertrend_3 = 1.88,
+  n_atr = 12,
+  f_atr = 1.5, # factor to multiple ATR by when determining sell stop
+  risk_ratio = 20,
 
-  n_supertrend_4 = 15,    # Supertrend for SELL signals
-  f_supertrend_4 = 2.1,
+  n_rsi = 14,
 
-  n_ema_short = 22,
-  n_ema_long = 31,
+  n_fast_macd = 12,
+  n_slow_macd = 26,
+  n_signal_macd = 9,
 
-  n_atr = 18,
-  f_atr = 1.1, # factor to multiple ATR by when determining sell stop
-  risk_ratio = 50,
+  n_adx = 20,
 
-  n_bband = 20,
-  sd_bband = 2.9,
-  n_above_bband_hi = 1,
-
-  slope_threshold_buy_hold = -1.5,
-  slope_threshold_sell_hold = 2.7,
+  n_bbands = 20,
+  sd_bbands = 2,
 
   time_window = 5000,        # Window of time orders are good for on the server (milliseconds)
   wait_and_see = TRUE,      # wait until time step is a portion complete before acting
-  wait_and_see_prop = 10/60,
-  double_check = TRUE,       # when short buy/sell triggered, wait X seconds then double check the logic
-  double_check_wait = 5     # in seconds
+  wait_and_see_prop = 30/60,
+  double_check = FALSE,       # when short buy/sell triggered, wait X seconds then double check the logic
+  double_check_wait = 10     # in seconds
 
 )
 
@@ -77,34 +72,17 @@ param_default <- list(
 
 t_start <- proc.time()
 
-n <- 1000 # number of LHS replicates
-Y <- geneticLHS(n=n, k=17, pop=50, gen=10, pMut=0.25, verbose=T)
+n <- 100 # number of LHS replicates
+Y <- geneticLHS(n=n, k=6, pop=50, gen=10, pMut=0.25, verbose=T)
 
-Y[,1] <- qunif(Y[,1], 5, 30)         # n_supertrend_1
-Y[,2] <- qunif(Y[,2], 0.75, 1)     # f_supertrend_1
+Y[,1] <- qunif(Y[,1], 10, 30)         # n_supertrend_1
+Y[,2] <- qunif(Y[,2], 1, 3)     # f_supertrend_1
 
-Y[,3] <- qunif(Y[,3], 5, 30)      # n_supertrend_2
-Y[,4] <- qunif(Y[,4], 1, 1.25)     # f_supertrend_2
+Y[,3] <- qunif(Y[,3], 0.01, 0.05)     # parabolic SAR accelerator
+Y[,4] <- qunif(Y[,4], 0.2, 0.5)     # # parabolic SAR maximum accelerator
 
-Y[,5] <- qunif(Y[,5], 5, 30)      # n_supertrend_3
-Y[,6] <- qunif(Y[,6], 1.25, 1.5)     # f_supertrend_3
-
-Y[,7] <- qunif(Y[,7], 5, 30)      # n_supertrend_4
-Y[,8] <- qunif(Y[,8], 1.5, 1.75)     # f_supertrend_4
-
-Y[,9] <- qunif(Y[,9], 5, 30)        # n_ema_short
-Y[,10] <- qunif(Y[,10], 35, 90)     # n_ema_long
-
-Y[,11] <- qunif(Y[,11], 10, 30)    # n_atr
-Y[,12] <- qunif(Y[,12], 1, 2)      # f_atr
-
-Y[,13] <- qunif(Y[,13], 15, 25)         # n_bband
-Y[,14] <- qunif(Y[,14], 1.75, 2.5)     # sd_bband
-Y[,15] <- qunif(Y[,15], 1.5, 4.5)       # n_above_bband_hi
-
-Y[,16] <- qunif(Y[,16], -3, -1)     # slope_threshold_buy_hold
-Y[,17] <- qunif(Y[,17], 1, 6)       # slope_threshold_sell_hold
-
+Y[,5] <- qunif(Y[,5], 10, 30)    # n_atr
+Y[,6] <- qunif(Y[,6], 1, 3)     # f_atr
 
 
 
@@ -113,27 +91,12 @@ map_lhs_to_param <- function(Y, param, i) {
   param$n_supertrend_1 <- Y[i,1]
   param$f_supertrend_1 <- Y[i,2]
 
-  param$n_supertrend_2 <- Y[i,3]
-  param$f_supertrend_2 <- Y[i,4]
+  param$aceel_sar <- Y[i,3]
+  param$max_accel_sar <- Y[i,4]
 
-  param$n_supertrend_3 <- Y[i,5]
-  param$f_supertrend_3 <- Y[i,6]
+  param$n_atr <- Y[i,5]
+  param$f_atr <- Y[i,6]
 
-  param$n_supertrend_4 <- Y[i,7]
-  param$f_supertrend_4 <- Y[i,8]
-
-  param$n_ema_short <- Y[i,9]
-  param$n_ema_long <- Y[i,10]
-
-  param$n_atr <- Y[i,11]
-  param$f_atr <- Y[i,12]
-
-  param$n_bband <- Y[i,13]
-  param$sd_bband <- Y[i,14]
-  param$n_above_bband_hi <- Y[i,15]
-
-  param$slope_threshold_buy_hold <- Y[i,16]
-  param$slope_threshold_sell_hold <- Y[i,17]
 
   return(param)
 
@@ -271,11 +234,11 @@ par(mfrow=c(3,1), xpd=F)
 
 plot(d$date_time, d$close, type='l', main=best$param$symbol)
 
-lines(d$date_time, d$supertrend_1, col='green3')
-lines(d$date_time, d$supertrend_2, col='red3')
+lines(d$date_time, d$supertrend_1, col='blue')
+lines(d$date_time, d$sar, col='goldenrod', lty=3)
 
-abline(v=trades$date_time[trades$action == 'buy'], col='green3')
-abline(v=trades$date_time[trades$action == 'sell'], col='red3')
+abline(v=trades$date_time[trades$action == 'buy'], col='green3', lwd=0.5)
+abline(v=trades$date_time[trades$action == 'sell'], col='red3', lwd=0.5)
 
 plot(trades$date_time, trades$total_value, pch=19, cex=1, xlim=range(d$date_time), main=msg)
 lines(trades$date_time, trades$total_value)

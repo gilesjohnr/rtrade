@@ -35,7 +35,7 @@ run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
         tmp <- data.frame(trade_id = paste(unlist(strsplit(as.character(d$date_time[i]), '[^0-9]')), collapse = ''),
                           date_time = d$date_time[i],
                           action = 'buy',
-                          price = d$mid[i], # Or actual execution price from ticket
+                          price = d$close[i], # Or actual execution price from ticket
                           units = trade_units)
 
         tmp$total_value <- tmp$price*tmp$units
@@ -55,7 +55,7 @@ run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
         tmp <- data.frame(trade_id = trades[which.max(trades$date_time), 'trade_id'],
                           date_time = d$date_time[i],
                           action = 'sell',
-                          price = d$mid[i],
+                          price = d$close[i],
                           units = trades[which.max(trades$date_time), 'units'])
 
         tmp$total_value <- tmp$price * tmp$units
