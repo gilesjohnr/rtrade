@@ -8,7 +8,7 @@ qb <- function() {
   bal_usd <- round(bal$free[bal$asset == 'USD'] - 6e-05, 4)
 
   tmp <- get_order_depth(param$symbol, limit=1)
-  bid <- tmp$bid_price + (tmp$ask_price - tmp$bid_price)*0.05
+  bid <- tmp$bid_price + (tmp$ask_price - tmp$bid_price)*0.1
 
   buy_order <- create_order(symbol = param$symbol,
                             side = 'BUY',

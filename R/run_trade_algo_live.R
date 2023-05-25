@@ -5,6 +5,21 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
   while (TRUE) {
 
+
+    last_order <- get_last_order(param$symbol, status='FILLED')
+
+    time_since_fit <- as.POSIXct(Sys.time()) -  param$run_date
+
+    if (time_since_fit > 3 & last_order$side == 'SELL') {
+
+      message(":: Refitting trade algo ::")
+      tmp <- fit_trade_algo(param)
+      param <- tmp$param_best
+      rm(tmp)
+
+    }
+
+
     tryCatch({
 
       timestamp <- timestamp_to_date(get_timestamp())
@@ -40,7 +55,6 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       bal_sym <- bal$USD[bal$asset == param$asset]
       if (length(bal_sym) == 0) bal_sym <- 0
 
-      last_order <- get_last_order(param$symbol, status='FILLED')
 
 
 
@@ -48,7 +62,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
       # Get current data
       #-------------------------------------------------------------------------
 
-      d <- compile_data(param=param, limit=param$limit)
+      d <- compile_data(param=param, limit=360)
       t <- which.max(d$date_time)
 
 
@@ -63,10 +77,16 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
         # BUY strategy
         #-------------------------------------------------------------------------
 
-        if (verbose) message(glue("{timestamp} | mode: BUY"))
+        if (verbose) {
+          if (param$hold) {
+            message(glue("{timestamp} | mode: HOLD"))
+          } else {
+            message(glue("{timestamp} | mode: BUY"))
+          }
+        }
 
-
-        logic_buy <- get_buy_logic(d=d, t=t, param=param, live=TRUE, verbose=verbose)
+        logic_buy <- FALSE
+        if (!param$hold) logic_buy <- get_buy_logic(d=d, t=t, param=param, live=TRUE, verbose=verbose)
 
 
         if (logic_buy) {
@@ -78,8 +98,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             cancel_all_orders(param$symbol)
 
             tmp <- get_order_depth(param$symbol, limit=1)
-            #bid <- tmp$bid_price + (tmp$ask_price - tmp$bid_price)*0.1
-            bid <- mean(c(d$close[t], d$mid[t]))
+            bid <- tmp$bid_price + 0.01
 
             buy_order <- create_order(symbol = param$symbol,
                                       side = 'BUY',
@@ -180,11 +199,16 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
         # SELL strategy
         #-------------------------------------------------------------------------
 
-        message(glue("{timestamp} | mode: SELL"))
+        if (verbose) {
+          if (param$hold) {
+            message(glue("{timestamp} | mode: HOLD"))
+          } else {
+            message(glue("{timestamp} | mode: SELL"))
+          }
+        }
 
-
-        logic_sell <- get_sell_logic(d=d, t=t, param=param, live=TRUE, verbose=verbose)
-
+        logic_sell <- FALSE
+        if (!param$hold) logic_sell <- get_sell_logic(d=d, t=t, param=param, live=TRUE, verbose=verbose)
 
 
         if (logic_sell) {
@@ -196,8 +220,7 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
             cancel_all_orders(param$symbol)
 
             tmp <- get_order_depth(param$symbol, limit=1)
-            #ask <- tmp$ask_price - (tmp$ask_price - tmp$bid_price)*0.1
-            ask <- mean(c(d$close[t], d$mid[t]))
+            ask <- tmp$ask_price - 0.01
 
             sell_order <- create_order(symbol = param$symbol,
                                        side = 'SELL',
@@ -286,49 +309,94 @@ run_trade_algo_live <- function(param, verbose=TRUE, display=TRUE) {
 
       if (display) {
 
-        if (F) d <- compile_data(param_best)
+        if (F) d <- compile_data(param_best, limit=300)
 
         bb <- as.data.frame(BBands(HLC=d[,c("high","low","close")], n=as.integer(param$n_bbands), sd=param$sd_bbands))
         d$bb_avg <- bb$mavg
         d$bb_hi <- bb$up
         d$bb_lo <- bb$dn
 
+        d$candle_color <- ifelse(d$open < d$close, 'red3', 'darkgreen')
+
         tmp <- get_all_orders(symbol = param$symbol)
         tmp <- tmp[tmp$status %in% c('FILLED', 'PARTIALLY FILLED'),]
+        tmp$price <- as.numeric(tmp$price)
+        tmp$price[tmp$price == 0] <- NA
+        tmp <- tmp[tmp$date_time >= min(d$date_time),]
+
+        n <- pmin(param$n_quantile_rsi, nrow(d)) - 1
+        threshold_buy_rsi <- quantile(d$rsi_smooth[(nrow(d)-n):nrow(d)], probs=param$quantile_buy_rsi, na.rm=TRUE)
+        threshold_sell_rsi <- quantile(d$rsi_smooth[(nrow(d)-n):nrow(d)], probs=param$quantile_sell_rsi, na.rm=TRUE)
 
         if ("RStudioGD" %in% names(dev.list())) dev.off(dev.list()["RStudioGD"])
-        par(mfrow=c(2,1), mar=c(3,3,2,5), xpd=FALSE)
-
-        plot_candles(d, main=glue("{param$symbol} | {d$date_time[t]} | Local: {format(Sys.time(), '%H:%M:%S')}"))
-        lines(d$date_time, d$supertrend_1, type='l', lwd=1, col='blue')
-        lines(d$date_time, d$sar, type='l', lwd=1, lty=3, col='cyan3')
-        lines(d$date_time, d$bb_avg, lwd=0.8, col='darkorange')
-        lines(d$date_time, d$bb_hi, lwd=0.8, col='goldenrod', lty=3)
-        lines(d$date_time, d$bb_lo, lwd=0.8, col='goldenrod', lty=3)
-        #lines(d$date_time, d$ema_short, lwd=2, col='cyan3')
-        #lines(d$date_time, d$ema_long, lwd=2, col='black')
-        #lines(d$date_time, d$supertrend_1, type='l', lwd=1, col='violet')
-        #lines(d$date_time, d$supertrend_2, type='l', lwd=1, col='violetred')
-        #lines(d$date_time, d$supertrend_3, type='l', lwd=1, col='slateblue2')
-        #lines(d$date_time, d$supertrend_4, type='l', lwd=1, col='darkviolet')
 
 
-        sel <- tmp$side == 'BUY'
-        abline(v=tmp$date_time[sel], col='green3', lty=3, lwd=0.5)
-        points(tmp$date_time[sel], y=tmp$price[sel], pch=24, col='green3')
-
-        sel <- tmp$side == 'SELL'
-        abline(v=tmp$date_time[sel], col='red', lty=3, lwd=0.5)
-        points(tmp$date_time[sel], y=tmp$price[sel], pch=25, col='red')
-
-        abline(h=d$close[t], lty=2, lwd=0.5)
-
-        par(xpd=TRUE)
-        text(x=max(d$date_time[t])+(60*10), y=d$close[t], label=d$close[t], pos=4)
+        g <- ggplot(d, aes(x=date_time)) +
+          geom_vline(xintercept=as.POSIXct(tmp[tmp$side == 'BUY', 'date_time']), linetype="dotted", linewidth=0.4, color='green') +
+          geom_vline(xintercept=as.POSIXct(tmp[tmp$side == 'SELL', 'date_time']), linetype="dotted", linewidth=0.4, color='red') +
+          xlab('') +
+          theme_minimal() +
+          theme(legend.position='none',
+                panel.grid.minor = element_blank(),
+                plot.margin = margin(t = 2, r = 2, b = 2, l = 2))
 
 
-        plot(d$date_time, d$rsi, type='l')
-        abline(h=c(30,70), lwd=0.5, lty=2)
+        p <- suppressWarnings(cowplot::plot_grid(
+
+          g +
+            ggtitle(glue("{param$symbol} | {d$date_time[nrow(d)]} | Local: {format(Sys.time(), '%H:%M:%S')}")) +
+            geom_ribbon(aes(ymin=bb_lo, ymax=bb_hi), color='grey', linewidth=0.25, alpha=0.1) +
+            geom_line(aes(y=bb_avg), color='grey25', linewidth=0.4, na.rm=TRUE) +
+            geom_segment(aes(x=date_time, xend=date_time, y=open, yend=close, color=candle_color), linewidth=1) +
+            geom_segment(aes(x=date_time, xend=date_time, y=low, yend=high, color=candle_color), linewidth=0.3) +
+            geom_line(aes(y=supertrend_1), color='blue2', linewidth=0.4, na.rm=TRUE) +
+            geom_line(aes(y=sar), color='orange3', linewidth=0.7, linetype='dashed', na.rm=TRUE) +
+            geom_hline(yintercept=d$close[nrow(d)], linetype="dashed", linewidth=0.1) +
+            geom_point(data=tmp[tmp$side == 'BUY',], aes(x=date_time, y=price), shape=24, size=2, color='green2') +
+            geom_point(data=tmp[tmp$side == 'SELL',], aes(x=date_time, y=price), shape=25, size=2, color='red2') +
+            scale_color_manual(values=c("red3", "darkgreen")) +
+            ylab('Price') +
+            theme(axis.text.x=element_blank(),
+                  plot.title=element_text(size=12))
+          ,
+
+
+          g +
+            geom_bar(aes(x=date_time, y=macd_diff, fill=factor(macd_diff > 0)), stat='identity') +
+            geom_line(aes(y=macd_signal), color='black', linewidth=0.75, na.rm=TRUE) +
+            geom_line(aes(y=macd), color='purple2', linewidth=0.75, na.rm=TRUE) +
+            geom_hline(yintercept=0, linewidth=0.25) +
+            ylab('MACD') +
+            scale_fill_manual(values=c("red2", "green3")) +
+            theme(axis.text.x=element_blank())
+          ,
+
+
+          g +
+            geom_line(aes(y=rsi), color='royalblue2', linewidth=0.5, na.rm=TRUE) +
+            geom_line(aes(y=rsi_smooth), color='black', linewidth=0.6, na.rm=TRUE) +
+            geom_hline(yintercept=c(30,70), linetype="dashed", linewidth=0.25) +
+            geom_hline(yintercept=threshold_buy_rsi, linetype="dotted", linewidth=0.5, color='green3') +
+            geom_hline(yintercept=threshold_sell_rsi, linetype="dotted", linewidth=0.5, color='red2') +
+            ylab('RSI') +
+            theme(axis.text.x=element_blank())
+          ,
+
+          g +
+            geom_line(aes(y=adx), linewidth=0.75, na.rm=TRUE) +
+            geom_line(aes(y=adx_pos), color='green4', linewidth=0.25, na.rm=TRUE) +
+            geom_line(aes(y=adx_neg), color='red4', linewidth=0.25, na.rm=TRUE) +
+            ylab('ADX')
+          ,
+
+          ncol=1,
+          align='v',
+          rel_heights = c(3,1,1,1)
+
+        ))
+
+        print(p)
+
 
 
       }

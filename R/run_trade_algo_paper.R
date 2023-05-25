@@ -1,23 +1,54 @@
-run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
-
+run_trade_algo_paper <- function(param, time_start, time_stop, last_trade=NULL, verbose=TRUE) {
 
   #-------------------------------------------------------------------------
   # Get current data
   #-------------------------------------------------------------------------
 
-  d <- compile_data(param=param, time_stop=time_stop)
-  t <- which.max(d$date_time)
+  d <- tryCatch({
 
+  compile_data(param=param,
+                    time_stop=date_to_timestamp(time_stop),
+                    limit=1000)
+
+  }, error = function(e) {
+
+    Sys.sleep(2)
+
+    compile_data(param=param,
+                 time_stop=date_to_timestamp(time_stop),
+                 limit=1000)
+
+  })
+
+  if (!(time_start >= min(d$date_time))) stop ("time_start out of bounds")
+  if (!((time_stop - 60) <= max(d$date_time))) stop ("time_stop out of bounds")
+
+  #d <- d[d$date_time >= time_start & d$date_time <= time_stop,]
+  t <- which.max(d$date_time)
+  all_dates <- d$date_time[d$date_time >= time_start & d$date_time <= time_stop]
 
   #-------------------------------------------------------------------------
   # Run trading strategy
   #-------------------------------------------------------------------------
 
   error_state <- FALSE
-  trades <- data.frame()
-  state <- NA
 
-  for (i in 3:(nrow(d))) {
+  if (is.null(last_trade)) {
+
+    trades <- data.frame()
+    state <- NA
+
+    } else {
+
+      trades <- last_trade[,c("trade_id", "date_time", "action", "price", "units", "total_value")]
+      state <- last_trade$action
+
+    }
+
+
+  for (ii in all_dates) {
+
+    i <- which(d$date_time == ii)
 
     if (is.na(state) | state == 'sell') {
 
@@ -35,7 +66,7 @@ run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
         tmp <- data.frame(trade_id = paste(unlist(strsplit(as.character(d$date_time[i]), '[^0-9]')), collapse = ''),
                           date_time = d$date_time[i],
                           action = 'buy',
-                          price = d$close[i], # Or actual execution price from ticket
+                          price = mean(c(d$mid[i], d$close[i])), # Or actual execution price from ticket
                           units = trade_units)
 
         tmp$total_value <- tmp$price*tmp$units
@@ -49,13 +80,12 @@ run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
 
       logic_sell <- get_sell_logic(d=d, t=i, param=param, live=FALSE, trades=trades, verbose=verbose)
 
-
       if (logic_sell) {
 
         tmp <- data.frame(trade_id = trades[which.max(trades$date_time), 'trade_id'],
                           date_time = d$date_time[i],
                           action = 'sell',
-                          price = d$close[i],
+                          price = mean(c(d$mid[i], d$close[i])),
                           units = trades[which.max(trades$date_time), 'units'])
 
         tmp$total_value <- tmp$price * tmp$units
@@ -73,6 +103,7 @@ run_trade_algo_paper <- function(param, time_stop=NULL, verbose=TRUE) {
 
   }
 
+  d <- d[d$date_time >= time_start & d$date_time <= time_stop,]
 
   out <- list(n_trades = NA,
               win_prob = NA,

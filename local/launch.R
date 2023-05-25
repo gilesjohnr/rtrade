@@ -4,8 +4,14 @@
 
 rm(list=ls())
 
-pkg <- c("rtrade", "rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime', 'TTR', 'lhs')
-invisible(lapply(pkg, library, character.only=TRUE))
+invisible(
+  lapply(
+    c("rtrade", "rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime',
+      'TTR', 'lhs', 'zoo', 'ggplot2', 'gridExtra', 'cowplot', 'RColorBrewer'),
+    library,
+    character.only=TRUE
+  )
+)
 
 if (FALSE) {
 
@@ -27,12 +33,22 @@ data("handle")
 
 param_default <- list(
 
+  hold = FALSE, # When true, all BUY and SELL triggers are paused and engine is in WATCH mode
+
   asset = 'BTC',
   symbol = 'BTCUSD',
   interval_short = '1m', # in minutes
-  limit = pmin(1000, 60*(24+3)),
+  limit = pmin(1000, 60*16),
 
-  sleep_bt_runs = 3,
+  #time_window_anchor_date = as.POSIXct("2023-02-23 12:00:00"),
+  time_window_anchor_date = as.POSIXct(Sys.time()) - 60*60*3,
+  #time_window_anchor_date = as.POSIXct(Sys.time()),
+  time_window_train = 6, # in hours
+  time_window_test = 3,
+
+  n_lhs_samp = 500,  # Number of Latin Hyper Cube samples to run
+
+  sleep_bt_runs = 5,
   sleep_bt_orders = 30,
 
   n_supertrend_1 = 20,    # Supertrend for BUY signals
@@ -41,24 +57,34 @@ param_default <- list(
   accel_sar = 0.02,       # Parabolic SAR
   max_accel_sar = 0.2,
 
+  n_ema_short = 15, # Short-term Exponential Moving Average
+  n_ema_long = 45, # Long-term Exponential Moving Average
+
+  slope_threshold_buy = -1.5, # below this, do not buy
+  slope_threshold_sell = 6, # above this, do not sell
+
   n_atr = 12,
   f_atr = 1.5, # factor to multiple ATR by when determining sell stop
-  risk_ratio = 20,
+  risk_ratio = 100,
 
   n_rsi = 14,
+  n_quantile_rsi = 60*3,
+  quantile_buy_rsi = 0.6, # must be below this threshold for buy signal
+  quantile_sell_rsi = 0.4, # must be above this threshold for sell signal
+  quantile_overbought_rsi = 0.95,
 
   n_fast_macd = 12,
   n_slow_macd = 26,
   n_signal_macd = 9,
 
-  n_adx = 20,
+  n_adx = 15,
 
   n_bbands = 20,
   sd_bbands = 2,
 
   time_window = 5000,        # Window of time orders are good for on the server (milliseconds)
-  wait_and_see = TRUE,      # wait until time step is a portion complete before acting
-  wait_and_see_prop = 30/60,
+  wait_and_see = FALSE,      # wait until time step is a portion complete before acting
+  wait_and_see_prop = 5/60,
   double_check = FALSE,       # when short buy/sell triggered, wait X seconds then double check the logic
   double_check_wait = 10     # in seconds
 
@@ -67,151 +93,37 @@ param_default <- list(
 
 
 #-------------------------------------------------------------------------------
-# Run latin-hypercube sampling
+# Define training and testing time windows
 #-------------------------------------------------------------------------------
 
-t_start <- proc.time()
+# training time frame
+time_stop_train <- param_default$time_window_anchor_date
+time_start_train <- time_stop_train - (60*60*param_default$time_window_train)
 
-n <- 100 # number of LHS replicates
-Y <- geneticLHS(n=n, k=6, pop=50, gen=10, pMut=0.25, verbose=T)
-
-Y[,1] <- qunif(Y[,1], 10, 30)         # n_supertrend_1
-Y[,2] <- qunif(Y[,2], 1, 3)     # f_supertrend_1
-
-Y[,3] <- qunif(Y[,3], 0.01, 0.05)     # parabolic SAR accelerator
-Y[,4] <- qunif(Y[,4], 0.2, 0.5)     # # parabolic SAR maximum accelerator
-
-Y[,5] <- qunif(Y[,5], 10, 30)    # n_atr
-Y[,6] <- qunif(Y[,6], 1, 3)     # f_atr
-
-
-
-map_lhs_to_param <- function(Y, param, i) {
-
-  param$n_supertrend_1 <- Y[i,1]
-  param$f_supertrend_1 <- Y[i,2]
-
-  param$aceel_sar <- Y[i,3]
-  param$max_accel_sar <- Y[i,4]
-
-  param$n_atr <- Y[i,5]
-  param$f_atr <- Y[i,6]
-
-
-  return(param)
-
-}
-
-
-out <- data.frame()
-time_pin <- get_timestamp() # Pin the stop time so that all simulations have same data
-
-for (i in 1:n) {
-
-  message(i)
-
-  tmp_param <- map_lhs_to_param(Y, param=param_default, i)
-  tmp <- run_trade_algo_paper(param=tmp_param, time_stop=time_pin, verbose=FALSE)
-
-  out <- rbind(out,
-               data.frame(i = i,
-                          n_trades = tmp$n_trades,
-                          win_prob = tmp$win_prob,
-                          percent_change = tmp$percent_change,
-                          per_trade = round(tmp$percent_change/tmp$n_trades, 2),
-                          actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100,
-                          as.data.frame(tmp_param))
-  )
-
-}
-
-t_stop <- proc.time() - t_start
-message(paste('Runtime:', round(as.numeric(t_stop["elapsed"])/60, 2), 'minutes'))
+# testing time frame
+time_start_test <- time_stop_train
+time_stop_test <- time_start_test + (60*60*param_default$time_window_test)
 
 
 
 #-------------------------------------------------------------------------------
-# Clean up
+# Fit trade algo paramters
 #-------------------------------------------------------------------------------
 
-out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
-out$percent_change <- round(out$percent_change, 1)
-out$per_trade <- round(out$per_trade, 1)
-out$times_baseline <- out$percent_change/out$actual
+tmp <- fit_trade_algo(param=param_default)
 
-out <- out[rev(rank(order(out$percent_change, out$per_trade), ties.method='first')),]
-ranks <- sapply(out[,c('percent_change', 'per_trade', 'win_prob')], rank, ties.method='average')
-out$score <- rowMeans(ranks)
-out <- out[order(out$score, decreasing=TRUE),]
-#out <- out[order(out$percent_change, out$win_prob, decreasing=TRUE),]
+out <- tmp[[2]]
+param_best <- tmp[[1]]
+rm(tmp)
 
-
-out[1:10,]
 
 
 #-------------------------------------------------------------------------------
-# Set best parameters
+# Load best fit parameters
 #-------------------------------------------------------------------------------
 
-param_best <- map_lhs_to_param(Y, param=param_default, i=out$i[1])
-
-if (FALSE) {
-
-  param_best <- map_lhs_to_param(Y, param=param_default, i=68) # Manual override
-
-}
-
-
-#-------------------------------------------------------------------------------
-# Cache best fit parameters
-#-------------------------------------------------------------------------------
-
-saveRDS(out, file.path(getwd(), 'output', 'lhs_results.rds'))
-saveRDS(param_best, file.path(getwd(), 'output', 'param_best.rds'))
-
-
-#-------------------------------------------------------------------------------
-# Optional: rerun previous results on recent data
-#-------------------------------------------------------------------------------
-
-if (FALSE) {
-
-  out <- readRDS(file.path(getwd(), 'output', 'lhs_results.rds'))
-  param_best <- readRDS(file.path(getwd(), 'output', 'param_best.rds'))
-
-
-  # Re-run top X number of models on recent data
-  n_best <- 10
-  out_best <- data.frame()
-  time_pin <- get_timestamp() # Pin the stop time so that all simulations have same data
-
-  for (i in 1:n_best) {
-
-    message(i)
-
-    tmp_param <- as.list(out[i,colnames(out) %in% names(param_best)])
-    tmp <- run_trade_algo_paper(param=tmp_param, time_stop=time_pin, verbose=FALSE)
-
-    out_best <- rbind(
-      out_best,
-      data.frame(i = out$i[i],
-                 n_trades = tmp$n_trades,
-                 win_prob = tmp$win_prob,
-                 percent_change = tmp$percent_change,
-                 per_trade = round(tmp$percent_change/tmp$n_trades, 2),
-                 actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100,
-                 as.data.frame(tmp_param)
-      )
-    )
-
-  }
-
-  out_best <- out_best[order(out_best$percent_change, out_best$win_prob, decreasing=TRUE),]
-
-  # Reset best parameters
-  param_best <- as.list(out_best[1, colnames(out_best) %in% names(param_best)])
-
-}
+out <- readRDS(file.path(getwd(), 'output', 'lhs_results.rds'))
+param_best <- readRDS(file.path(getwd(), 'output', 'param_best.rds'))
 
 
 
@@ -219,40 +131,116 @@ if (FALSE) {
 # Plot paper run
 #-------------------------------------------------------------------------------
 
-#best <- run_trade_algo(param=param_default, live=FALSE)
-best <- run_trade_algo(param=param_best, live=FALSE)
+#best_train <- run_trade_algo_paper(param=param_default,
+#                                   time_start=time_start_train,
+#                                   time_stop=time_stop_train)
 
 
-d <- best$data
-trades <- best$trades
+best_train <- run_trade_algo_paper(param=param_best,
+                                   time_start=time_start_train,
+                                   time_stop=time_stop_train)
 
-msg <- glue("{best$n_trades} trades, {best$percent_change}% growth ({round(best$percent_change/best$n_trades, 2)}% per trade)
+best_test <- run_trade_algo_paper(param=param_best,
+                                  time_start=time_start_test,
+                                  time_stop=time_stop_test,
+                                  #time_stop=as.POSIXct(Sys.time()) - 60,
+                                  last_trade = best_train$trades[nrow(best_train$trades), ])
+
+
+trade_plots <- "Train"
+trade_plots <- c("Train", "Test")
+
+par(mfrow=c(3,2), oma=c(0,0,0,0), xpd=F)
+layout(mat=matrix(1:6, ncol=2, byrow = F),
+       heights = as.integer(c(2,1,1)),
+       widths = as.integer(c(3, 2)))
+
+for (i in trade_plots) {
+
+  if (i == "Train") best <- best_train
+  if (i == "Test") best <- best_test
+  if (length(trade_plots) == 1) best_test <- best_train
+
+  d <- best$data
+  trades <- best$trades
+
+
+  par(mar=c(2,2,1,1))
+
+  d$green <- d$open < d$close
+  sel <- as.logical(d$green)
+
+  plot(d$date_time, d$mid, type='l', xlab='', ylab='Price', lwd=0.5,
+       ylim=range(rbind(best_train$data[,c('high', 'low')], best_test$data[,c('high', 'low')]), na.rm=T),
+       main=i)
+
+  segments(x0=d$date_time[sel], x1=d$date_time[sel],
+           y0=d$low[sel], y1=d$high[sel],
+           col='darkgreen')
+
+  segments(x0=d$date_time[sel], x1=d$date_time[sel],
+           y0=d$open[sel], y1=d$close[sel],
+           col='darkgreen', lwd=2.5)
+
+  segments(x0=d$date_time[!sel], x1=d$date_time[!sel],
+           y0=d$low[!sel], y1=d$high[!sel],
+           col='red3')
+
+  segments(x0=d$date_time[!sel], x1=d$date_time[!sel],
+           y0=d$open[!sel], y1=d$close[!sel],
+           col='red3', lwd=2.5)
+
+  lines(d$date_time, d$supertrend_1, col='blue')
+  lines(d$date_time, d$sar, col='orange3', lty=2)
+  #lines(d$date_time, d$ema_long)
+  lines(d$date_time, d$ema_short, col='cyan3')
+
+  sel <- trades$action == 'buy'
+  abline(v=trades$date_time[sel], col='green2', lwd=0.75, lty=3)
+  points(trades$date_time[sel], trades$price[sel], col='green2', pch=24, cex=1.25)
+
+  sel <- trades$action == 'sell'
+  abline(v=trades$date_time[sel], col='red', lwd=0.75, lty=3)
+  points(trades$date_time[sel], trades$price[sel], col='red', pch=25, cex=1.25)
+
+
+
+  par(mar=c(2,2,4,1))
+
+  msg <- glue("{best$percent_change}% growth in {best$n_trades} trade(s) ({round(best$percent_change/best$n_trades, 2)}% per trade)
             Actual = {round( d$close[nrow(d)]/d$close[1] - 1,3)*100}%")
 
-#layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
-par(mfrow=c(3,1), xpd=F)
+  plot(trades$date_time, trades$total_value, pch=19, cex=1, main=msg,
+       xlim=range(d$date_time),
+       ylim=range(c(best_train$trades$total_value, best_test$trades$total_value), na.rm=T))
 
-plot(d$date_time, d$close, type='l', main=best$param$symbol)
+  lines(trades$date_time, trades$total_value)
 
-lines(d$date_time, d$supertrend_1, col='blue')
-lines(d$date_time, d$sar, col='goldenrod', lty=3)
 
-abline(v=trades$date_time[trades$action == 'buy'], col='green3', lwd=0.5)
-abline(v=trades$date_time[trades$action == 'sell'], col='red3', lwd=0.5)
-
-plot(trades$date_time, trades$total_value, pch=19, cex=1, xlim=range(d$date_time), main=msg)
-lines(trades$date_time, trades$total_value)
-
-if (best$n_trades > 1) {
   tmp <- trades[trades$action == 'sell',]
-  hist(tmp$rate, breaks=30, main=glue("Median rate = {format(round(median(tmp$rate),5), scientific=F)}, Mean rate = {format(round(mean(tmp$rate),5), scientific=F)}
-                                      Win probability = {round(sum(tmp$rate > 0)/nrow(tmp),2)}"))
-  abline(v=0)
-  abline(v=median(tmp$rate), lty=1, col='blue')
-  abline(v=quantile(tmp$rate, probs=c(0.0275, 0.975)), lty=2, col='blue')
+
+  if (nrow(tmp) < 2) {
+
+    plot(NA, NA, xlim=c(0,1), ylim=c(0,1), ylab="", xlab="", xaxt='n', yaxt='n')
+
+  } else {
+
+    hist(tmp$rate, breaks=30, main=glue("Mean rate = {format(round(mean(tmp$rate, na.rm=T),5), scientific=F)}
+                                      Win probability = {round(sum(tmp$rate > 0, na.rm=T)/nrow(tmp),2)}"))
+
+    abline(v=0)
+    abline(v=median(tmp$rate), lty=1, col='blue')
+    abline(v=quantile(tmp$rate, probs=c(0.0275, 0.975), na.rm=T), lty=2, col='blue')
+
+  }
+
+
+
 }
 
 par(mfrow=c(1,1))
+
+
 
 
 
@@ -264,8 +252,7 @@ run_trade_algo(param=param_best, live=TRUE)
 
 
 
-
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # Use with caution: quick BUY and SELL orders
 #-------------------------------------------------------------------------------
 
@@ -280,6 +267,8 @@ if (FALSE) {
 
   qs() # Quick SELL
 
+
+  get_account_balance()
 
 }
 
