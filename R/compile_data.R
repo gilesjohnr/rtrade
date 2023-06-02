@@ -29,15 +29,21 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
   d$sar <- SAR(HL=d[,c("high","low")], accel = c(param$accel_sar, param$max_accel_sar))
 
 
-  d$ema_short <- EMA(d[,"mid"], n=param$n_ema_short) # Exponential Moving Average
+  d$ema_short <- EMA(d[,"close"], n=param$n_ema_short) # Exponential Moving Average
   k <- 1
   for (i in (k+1):nrow(d)) d$ema_short[i] <- mean(d$ema_short[(i-k):i], na.rm=T)
   for (i in 2:nrow(d)) d$ema_short_slope[i] <- d$ema_short[i] - d$ema_short[i-1]
 
 
-  d$ema_long <- EMA(d[,"mid"], n=param$n_ema_long) # Exponential Moving Average
-  k <- 1
-  for (i in (k+1):nrow(d)) d$ema_long[i] <- mean(d$ema_long[(i-k):i], na.rm=T)
+  d$ema_mid <- EMA(d[,"close"], n=param$n_ema_mid) # Exponential Moving Average
+  #k <- 1
+  #for (i in (k+1):nrow(d)) d$ema_mid[i] <- mean(d$ema_mid[(i-k):i], na.rm=T)
+  for (i in 2:nrow(d)) d$ema_mid_slope[i] <- d$ema_mid[i] - d$ema_mid[i-1]
+
+
+  d$ema_long <- EMA(d[,"close"], n=param$n_ema_long) # Exponential Moving Average
+  #k <- 1
+  #for (i in (k+1):nrow(d)) d$ema_long[i] <- mean(d$ema_long[(i-k):i], na.rm=T)
   #for (i in 2:nrow(d)) d$ema_long_slope[i] <- d$ema_long[i] - d$ema_long[i-1]
 
 
@@ -47,7 +53,7 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
 
   # Relative Strength Index (RSI)
   d$rsi <- RSI(d[,"close"], n=param$n_rsi)
-  d$rsi_smooth <- zoo::rollmean(d$rsi, k=5, align='right', fill = NA, na.pad=T)
+  d$rsi_smooth <- zoo::rollmean(d$rsi, k=3, align='right', fill = NA, na.pad=T)
   for (i in 2:nrow(d)) d$rsi_smooth_slope[i] <- d$rsi_smooth[i] - d$rsi_smooth[i-1]
 
 
@@ -74,6 +80,16 @@ compile_data <- function(param, time_stop=NULL, limit=NULL) {
   d$bb_avg <- bb$mavg
   d$bb_hi <- bb$up
   d$bb_lo <- bb$dn
+
+  k <- as.data.frame(keltnerChannels(HLC=d[,c("high","low","close")], n=param$n_keltner, atr=param$atr_keltner))
+  d$keltner_hi <- k$up
+  d$keltner_avg <- k$mavg
+  d$keltner_lo <- k$dn
+
+  d$accum <- chaikinAD(HLC=d[,c("high","low","close")], volume = d$volume)
+  #d$accum_smooth <- smooth(d$accum, twiceit = TRUE)
+  d$accum_smooth <- zoo::rollmean(d$accum, k=6, align='right', fill = NA, na.pad=T)
+  for (i in 2:nrow(d)) d$accum_smooth_slope[i] <- d$accum_smooth[i] - d$accum_smooth[i-1]
 
 
   return(d)

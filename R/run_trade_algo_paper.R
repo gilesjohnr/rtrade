@@ -6,9 +6,9 @@ run_trade_algo_paper <- function(param, time_start, time_stop, last_trade=NULL, 
 
   d <- tryCatch({
 
-  compile_data(param=param,
-                    time_stop=date_to_timestamp(time_stop),
-                    limit=1000)
+    compile_data(param=param,
+                 time_stop=date_to_timestamp(time_stop),
+                 limit=1000)
 
   }, error = function(e) {
 

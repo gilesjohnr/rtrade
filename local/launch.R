@@ -7,7 +7,8 @@ rm(list=ls())
 invisible(
   lapply(
     c("rtrade", "rbinanceus", "httr", "jsonlite", 'glue', 'lubridate', 'anytime',
-      'TTR', 'lhs', 'zoo', 'ggplot2', 'gridExtra', 'cowplot', 'RColorBrewer'),
+      'TTR', 'lhs', 'zoo', 'ggplot2', 'gridExtra', 'cowplot', 'RColorBrewer',
+      'data.table', 'scales'),
     library,
     character.only=TRUE
   )
@@ -40,13 +41,13 @@ param_default <- list(
   interval_short = '1m', # in minutes
   limit = pmin(1000, 60*16),
 
-  #time_window_anchor_date = as.POSIXct("2023-02-23 12:00:00"),
-  time_window_anchor_date = as.POSIXct(Sys.time()) - 60*60*3,
-  #time_window_anchor_date = as.POSIXct(Sys.time()),
-  time_window_train = 6, # in hours
-  time_window_test = 3,
+  #time_window_anchor_date = as.POSIXct("2023-05-31 21:00:00"),
+  #time_window_anchor_date = as.POSIXct(Sys.time()) - 60*60*3,
+  time_window_anchor_date = as.POSIXct(Sys.time()),
+  time_window_train = 12, # in hours
+  time_window_test = 4,
 
-  n_lhs_samp = 500,  # Number of Latin Hyper Cube samples to run
+  n_lhs_samp = 200,  # Number of Latin Hyper Cube samples to run
 
   sleep_bt_runs = 5,
   sleep_bt_orders = 30,
@@ -57,8 +58,9 @@ param_default <- list(
   accel_sar = 0.02,       # Parabolic SAR
   max_accel_sar = 0.2,
 
-  n_ema_short = 15, # Short-term Exponential Moving Average
-  n_ema_long = 45, # Long-term Exponential Moving Average
+  n_ema_short = 20, # Short-term Exponential Moving Average
+  n_ema_mid = 75,
+  n_ema_long = 200, # Long-term Exponential Moving Average
 
   slope_threshold_buy = -1.5, # below this, do not buy
   slope_threshold_sell = 6, # above this, do not sell
@@ -68,10 +70,13 @@ param_default <- list(
   risk_ratio = 100,
 
   n_rsi = 14,
-  n_quantile_rsi = 60*3,
-  quantile_buy_rsi = 0.6, # must be below this threshold for buy signal
-  quantile_sell_rsi = 0.4, # must be above this threshold for sell signal
-  quantile_overbought_rsi = 0.95,
+  n_quantile_rsi = 14,
+
+  quantile_buy_rsi = 0.3, # must be below this threshold for buy signal
+  quantile_sell_rsi = 0.7, # must be above this threshold for sell signal
+
+  quantile_overbought_rsi = 0.9,
+  quantile_oversold_rsi = 0.1,
 
   n_fast_macd = 12,
   n_slow_macd = 26,
@@ -81,6 +86,9 @@ param_default <- list(
 
   n_bbands = 20,
   sd_bbands = 2,
+
+  n_keltner = 20,
+  atr_keltner = 2,
 
   time_window = 5000,        # Window of time orders are good for on the server (milliseconds)
   wait_and_see = FALSE,      # wait until time step is a portion complete before acting
@@ -131,9 +139,13 @@ param_best <- readRDS(file.path(getwd(), 'output', 'param_best.rds'))
 # Plot paper run
 #-------------------------------------------------------------------------------
 
-#best_train <- run_trade_algo_paper(param=param_default,
-#                                   time_start=time_start_train,
-#                                   time_stop=time_stop_train)
+if (F) {
+
+  best_train <- run_trade_algo_paper(param=param_default,
+                                     time_start=time_start_train,
+                                     time_stop=time_stop_train)
+
+}
 
 
 best_train <- run_trade_algo_paper(param=param_best,
@@ -142,8 +154,8 @@ best_train <- run_trade_algo_paper(param=param_best,
 
 best_test <- run_trade_algo_paper(param=param_best,
                                   time_start=time_start_test,
-                                  time_stop=time_stop_test,
-                                  #time_stop=as.POSIXct(Sys.time()) - 60,
+                                  #time_stop=time_stop_test,
+                                  time_stop=as.POSIXct(Sys.time()) - 60,
                                   last_trade = best_train$trades[nrow(best_train$trades), ])
 
 
@@ -192,7 +204,9 @@ for (i in trade_plots) {
 
   lines(d$date_time, d$supertrend_1, col='blue')
   lines(d$date_time, d$sar, col='orange3', lty=2)
-  #lines(d$date_time, d$ema_long)
+
+  lines(d$date_time, d$ema_long)
+  lines(d$date_time, d$ema_mid, col='purple')
   lines(d$date_time, d$ema_short, col='cyan3')
 
   sel <- trades$action == 'buy'

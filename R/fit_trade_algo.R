@@ -14,6 +14,27 @@ fit_trade_algo <- function(param) {
   time_stop_test <- time_start_test + (60*60*param$time_window_test)
 
 
+  d <- tryCatch({
+
+    compile_data(param=param,
+                 time_stop=date_to_timestamp(time_stop_train),
+                 limit=1000)
+
+  }, error = function(e) {
+
+    Sys.sleep(2)
+
+    compile_data(param=param,
+                 time_stop=date_to_timestamp(time_stop_train),
+                 limit=1000)
+
+  })
+
+  if (!(time_start_train >= min(d$date_time))) stop ("time_start out of bounds")
+  if (!((time_stop_train - 60) <= max(d$date_time))) stop ("time_stop out of bounds")
+
+  d <- d[d$date_time >= time_start_train & d$date_time <= time_stop_train,]
+
 
 
   #-------------------------------------------------------------------------------
@@ -23,7 +44,7 @@ fit_trade_algo <- function(param) {
   t_start <- proc.time()
 
   set.seed(1234)
-  Y <- geneticLHS(n=param$n_lhs_samp, k=13, pop=50, gen=10, pMut=0.25, verbose=TRUE)
+  Y <- geneticLHS(n=param$n_lhs_samp, k=19, pop=50, gen=10, pMut=0.25, verbose=TRUE)
 
   Y[,1] <- qunif(Y[,1], 6, 30)       # n_supertrend_1
   Y[,2] <- qunif(Y[,2], 1, 3)     # f_supertrend_1
@@ -32,18 +53,32 @@ fit_trade_algo <- function(param) {
   Y[,4] <- qunif(Y[,4], 0.2, 1)         # parabolic SAR maximum accelerator
 
   Y[,5] <- qunif(Y[,5], 15, 25)         # n_atr
-  Y[,6] <- qunif(Y[,6], 1, 2)          # f_atr
+  Y[,6] <- qunif(Y[,6], 1.5, 2.5)          # f_atr
 
-  Y[,7] <- qunif(Y[,7], 10, 20)         # n_rsi
-  Y[,8] <- qunif(Y[,8], 60, 60*4)         # n_qunatile_rsi
-  Y[,9] <- qunif(Y[,9], 0.55, 0.90)      # quantile_buy_rsi
-  Y[,10] <- qunif(Y[,10], 0.10, 0.45)    # quantile_sell_rsi
-  Y[,11] <- qunif(Y[,11], 0.95, 0.99)   # quantile_overbought_rsi
+  Y[,7] <- qunif(Y[,7], 5, 30)         # n_rsi
+  Y[,8] <- qunif(Y[,8], 60, 60*6)      # n_quantile_rsi
 
-  Y[,12] <- qunif(Y[,12], 15, 45)     # n_ema_short
-  Y[,13] <- qunif(Y[,13], -3, -1)    # slope_threshold_buy
-  #Y[,12] <- qunif(Y[,12], 3, 7)     # slope_threshold_sell
+  Y[,9] <- qunif(Y[,9], 0.1, 0.45)      # quantile_buy_rsi
+  Y[,10] <- qunif(Y[,10], 0.55, 0.9)    # quantile_sell_rsi
 
+  Y[,11] <- qunif(Y[,11], 0.9, 0.99)      # quantile_overbought_rsi
+  Y[,12] <- qunif(Y[,12], 0.01, 0.1)     # quantile_oversold_rsi
+
+  Y[,13] <- qunif(Y[,13], 10, 45)     # n_ema_short
+  Y[,14] <- qunif(Y[,14], -10, -0.5)    # slope_threshold_buy
+  Y[,15] <- qunif(Y[,15], 0.5, 10)     # slope_threshold_sell
+
+  Y[,16] <- qunif(Y[,16], 10, 30)     # n_keltner
+  Y[,17] <- qunif(Y[,17], 1, 3)     # atr_keltner
+
+  Y[,18] <- qunif(Y[,18], 10, 30)     # n_bbands
+  Y[,19] <- qunif(Y[,19], 1, 3)     # sd_bbands
+
+  #Y[,16] <- qunif(Y[,16], 11, 13)     # n_fast_macd = 12
+  #Y[,17] <- qunif(Y[,17], 24, 28)     # n_slow_macd = 26
+  #Y[,18] <- qunif(Y[,18], 8, 10)     # n_signal_macd = 9
+
+  #Y[,19] <- qunif(Y[,19], 10, 15)     # n_adx
 
 
   map_lhs_to_param <- function(Y, param, i) {
@@ -59,13 +94,28 @@ fit_trade_algo <- function(param) {
 
     param$n_rsi <- round(Y[i,7], 0)
     param$n_quantile_rsi <- round(Y[i,8], 0)
-    param$quantile_buy_rsi <- round(Y[i,9], 2)
-    param$quantile_sell_rsi <- round(Y[i,10], 2)
-    param$quantile_overbought_rsi <- round(Y[i,11], 3)
 
-    param$n_ema_short <- round(Y[i,12], 0)
-    param$slope_threshold_buy <- round(Y[i,13], 2)
-    #param$slope_threshold_sell <- round(Y[i,12], 2)
+    param$quantile_buy_rsi <- round(Y[i,9], 3)
+    param$quantile_sell_rsi <- round(Y[i,10], 3)
+
+    param$quantile_overbought_rsi <- round(Y[i,11], 3)
+    param$quantile_oversold_rsi <- round(Y[i,12], 3)
+
+    param$n_ema_short <- round(Y[i,13], 0)
+    param$slope_threshold_buy <- round(Y[i,14], 2)
+    param$slope_threshold_sell <- round(Y[i,15], 2)
+
+    param$n_keltner <- round(Y[i,16], 0)
+    param$atr_keltner <- round(Y[i,17], 2)
+
+    param$n_bbands <- round(Y[i,18], 0)
+    param$sd_bbands <- round(Y[i,19], 2)
+
+    #param$n_fast_macd <- round(Y[i,16], 0)
+    #param$n_slow_macd <- round(Y[i,17], 0)
+    #param$n_signal_macd <- round(Y[i,18], 0)
+
+    #param$n_adx <- round(Y[i,19], 0)
 
     return(param)
 
@@ -82,7 +132,6 @@ fit_trade_algo <- function(param) {
     if (i/param$n_lhs_samp == 0.75) message("75%")
     if (i/param$n_lhs_samp == 1) message("100%")
 
-
     tmp_param <- map_lhs_to_param(Y, param=param, i)
 
     tmp <- run_trade_algo_paper(param=tmp_param,
@@ -95,7 +144,7 @@ fit_trade_algo <- function(param) {
                             n_trades = tmp$n_trades,
                             win_prob = tmp$win_prob,
                             percent_change = tmp$percent_change,
-                            per_trade = round(tmp$percent_change/tmp$n_trades, 2),
+                            per_trade = round(tmp$percent_change/tmp$n_trades, 3),
                             actual = round(tmp$data$close[nrow(tmp$data)]/tmp$data$close[1] - 1,3)*100,
                             as.data.frame(tmp_param))
     )
@@ -112,15 +161,14 @@ fit_trade_algo <- function(param) {
   #-------------------------------------------------------------------------------
 
   out <- out[!is.nan(out$win_prob) & !is.na(out$win_prob),]
-  out$percent_change <- round(out$percent_change, 1)
-  out$per_trade <- round(out$per_trade, 1)
+  out$percent_change <- round(out$percent_change, 2)
   out$diff_baseline <- out$percent_change - out$actual
+  out$tmp_n_trades <- -1*out$n_trades
+  #out <- out[order(out$percent_change, out$win_prob, out$per_trade,  decreasing=TRUE),]
 
-  if (any(out$percent_change > 0)) out <- out[out$percent_change > 0,]
-  if (any(out$win_prob >= 0.5)) out <- out[out$win_prob >= 0.5,]
-  #if (any(out$n_trades > 1)) out <- out[out$n_trades > 1,]
-
-  out <- out[order(out$win_prob, out$n_trades, out$percent_change,  decreasing=TRUE),]
+  out$rank <- frank(out[,c('percent_change', 'win_prob', 'per_trade', 'tmp_n_trades')], ties.method = "average", na.last=TRUE)
+  out <- out[order(out$rank, decreasing=T),]
+  #out <- out[order(out$win_prob, out$per_trade, out$percent_change,  decreasing=TRUE),]
 
   out[1:10,1:6]
 
@@ -133,7 +181,7 @@ fit_trade_algo <- function(param) {
 
   if (FALSE) {
 
-    param_best <- map_lhs_to_param(Y, param=param, i=5) # Manual override
+    param_best <- map_lhs_to_param(Y, param=param, i=121) # Manual override
 
   }
 
